@@ -16,16 +16,20 @@ import Paths from '@src/constants/Paths'
 
 import EnvVars from '@src/constants/EnvVars'
 import HttpStatusCodes from '@src/constants/HttpStatusCodes'
-
 import { NodeEnvs } from '@src/constants/misc'
 import { RouteError } from '@src/other/classes'
 import cors from 'cors'
+import xmlBodyParser from 'express-xml-bodyparser'
 
 // **** Variables **** //
 
 const app = express()
 
 // **** Setup **** //
+
+app.use(express.json({ limit: '50mb' }))
+app.use(express.urlencoded({ limit: '50mb', extended: true }))
+app.use(xmlBodyParser())
 
 // Basic middleware
 app.use(cors())

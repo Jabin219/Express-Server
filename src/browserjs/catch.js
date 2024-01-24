@@ -1,31 +1,24 @@
 ;(async function () {
   var oldOpen = XMLHttpRequest.prototype.open
   var oldSend = XMLHttpRequest.prototype.send
-
-  window.lastResult = null // 用来存储最后一个请求的结果
-
+  window.lastResult = null
   XMLHttpRequest.prototype.open = function (method, url, async, user, pass) {
-    window.lastUrl = url // 在每次请求时更新URL
+    window.lastUrl = url
     oldOpen.call(this, method, url, async, user, pass)
   }
-
   XMLHttpRequest.prototype.send = function (data) {
     var self = this
-
     this.addEventListener('load', function () {
       window.lastResult = self.responseText // 存储请求的响应数据
     })
-
     oldSend.call(this, data)
   }
 })()
-
 const sleep = milliseconds =>
   new Promise(resolve => setTimeout(resolve, milliseconds))
-
 const clickAndWait = async element => {
   element.click()
-  await sleep(1000) // 等待异步操作完成，可以根据实际情况调整等待时间
+  await sleep(1200) // 等待异步操作完成，可以根据实际情况调整等待时间
 }
 
 const catchData = async () => {
@@ -63,16 +56,19 @@ const catchData = async () => {
           ).children
           for (let engine of engines) {
             await clickAndWait(engine)
-            // resultArray.push(window.lastResult)
             console.log(window.lastResult)
-            fetch('http://localhost:8081/api/parts/add', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: { xmlString: window.lastResult }
-            })
-            // console.log(resultArray)
+            // Use await to wait for the fetch to complete
+            try {
+              fetch('http://localhost:8081/api/parts/add', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ xmlString: window.lastResult })
+              })
+            } catch (error) {
+              console.error('Fetch error:', error)
+            }
           }
         }
       }

@@ -8,8 +8,8 @@ import PartModel from '@src/mongodb/models/part'
 const addParts = async (req: IReq, res: IRes) => {
   const { xmlString } = req.body
   try {
+    console.log('step 1')
     const parts = xmlParser(xmlString).partsdata
-
     if (parts) {
       parts.forEach(async (part: any) => {
         const filteredPart = { ...part }
@@ -17,30 +17,31 @@ const addParts = async (req: IReq, res: IRes) => {
         delete filteredPart.supplier
         delete filteredPart.part_type
         delete filteredPart.qty
-        try {
-          const existingPart = await PartModel.findOne({
-            partNumber: part.part_no['#text']
-          })
-
-          if (!existingPart) {
+        const existingPart = await PartModel.findOne({
+          partNumber: part.part_no['#text']
+        })
+        console.log('step 2')
+        if (!existingPart) {
+          try {
             const newPart = new PartModel({
               partNumber: part.part_no['#text'],
               supplier: part.supplier['#text'],
               partType: part.part_type['#text'],
               qty: part.qty['#text'],
-              othersByJson: JSON.stringify({ filteredPart })
+              othersByJson: JSON.stringify({ ...filteredPart })
             })
-
             await newPart.save()
-          } else {
+          } catch (error) {
             console.log(
               `Skipping duplicate partNumber: ${part.part_no['#text']}`
             )
           }
-        } catch (error) {
-          console.error(error)
+        } else {
+          console.log(`Skipping duplicate partNumber: ${part.part_no['#text']}`)
         }
+        console.log('step 3')
       })
+      console.log('step 4')
       return res.status(HttpStatusCodes.OK).json({ success: true })
     } else {
       return res.status(HttpStatusCodes.OK)
