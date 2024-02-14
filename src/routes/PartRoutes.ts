@@ -9,7 +9,6 @@ const addParts = async (req: IReq, res: IRes) => {
   const { xmlString } = req.body
   const parts = xmlParser(xmlString).partsdata || []
   try {
-    console.log('step 1')
     if (parts) {
       // 如果parts是一个对象，处理单个部件
       if (typeof parts === 'object' && !Array.isArray(parts)) {

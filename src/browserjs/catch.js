@@ -22,7 +22,7 @@ const clickAndWait = async element => {
 }
 const clickAndWaitMore = async element => {
   element.click()
-  await sleep(3000) // 等待异步操作完成，可以根据实际情况调整等待时间
+  await sleep(2000) // 等待异步操作完成，可以根据实际情况调整等待时间
 }
 
 const makeFetchRequest = async () => {
