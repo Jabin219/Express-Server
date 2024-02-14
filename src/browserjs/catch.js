@@ -20,6 +20,26 @@ const clickAndWait = async element => {
   element.click()
   await sleep(1200) // 等待异步操作完成，可以根据实际情况调整等待时间
 }
+const clickAndWaitMore = async element => {
+  element.click()
+  await sleep(3000) // 等待异步操作完成，可以根据实际情况调整等待时间
+}
+
+const makeFetchRequest = async () => {
+  try {
+    const response = await fetch('http://localhost:8081/api/parts/add', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ xmlString: window.lastResult })
+    })
+    const data = await response.json()
+    console.log('Fetch response:', data)
+  } catch (error) {
+    console.error('Fetch error:', error)
+  }
+}
 
 const catchData = async () => {
   // 获取 years 列表
@@ -29,6 +49,7 @@ const catchData = async () => {
     return
   }
   const yearsArray = Array.from(years)
+
   // 主循环，遍历 years 列表
   for (let year of yearsArray) {
     await clickAndWait(year)
@@ -55,20 +76,9 @@ const catchData = async () => {
             'combo-1064-picker-listEl'
           ).children
           for (let engine of engines) {
-            await clickAndWait(engine)
+            await clickAndWaitMore(engine)
             console.log(window.lastResult)
-            // Use await to wait for the fetch to complete
-            try {
-              fetch('http://localhost:8081/api/parts/add', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ xmlString: window.lastResult })
-              })
-            } catch (error) {
-              console.error('Fetch error:', error)
-            }
+            await makeFetchRequest() // 等待 fetch 请求完成
           }
         }
       }
