@@ -18,10 +18,6 @@ const sleep = milliseconds =>
   new Promise(resolve => setTimeout(resolve, milliseconds))
 const clickAndWait = async element => {
   element.click()
-  await sleep(1200) // 等待异步操作完成，可以根据实际情况调整等待时间
-}
-const clickAndWaitMore = async element => {
-  element.click()
   await sleep(2000) // 等待异步操作完成，可以根据实际情况调整等待时间
 }
 
@@ -40,49 +36,77 @@ const makeFetchRequest = async () => {
     console.error('Fetch error:', error)
   }
 }
+const getEngines = async () => {
+  // 循环处理 engines
+  const engines = document.getElementById('combo-1064-picker-listEl')?.children
+  if (engines) {
+    const enginesArray = Array.from(engines)
+    if (enginesArray.length > 0) {
+      for (let engine of enginesArray) {
+        await clickAndWait(engine)
+        console.log(window.lastResult)
+        await makeFetchRequest() // 等待 fetch 请求完成
+      }
+    }
+  } else {
+    console.log(window.lastResult)
+    await makeFetchRequest() // 等待 fetch 请求完成
+  }
+}
+const getParts = async () => {
+  // 循环处理 parts
+  const parts = document.getElementById('combo-1063-picker-listEl')?.children
+  if (parts) {
+    const partsArray = Array.from(parts)
+    if (partsArray.length > 0) {
+      for (let part of partsArray) {
+        await clickAndWait(part)
+        await getEngines()
+      }
+    }
+  } else {
+    await getEngines()
+  }
+}
+const getModels = async () => {
+  // 循环处理 models
+  const models = document.getElementById('combo-1062-picker-listEl')?.children
+  if (models) {
+    const modelsArray = Array.from(models)
+    if (modelsArray.length > 0) {
+      for (let model of modelsArray) {
+        await clickAndWait(model)
+        await getParts()
+      }
+    }
+  } else {
+    await getParts()
+  }
+}
+const getMakes = async () => {
+  // 循环处理 makes
+  const makes = document.getElementById('combo-1061-picker-listEl')?.children
+  if (makes) {
+    const makesArray = Array.from(makes)
+    if (makesArray.length > 0) {
+      for (let make of makesArray) {
+        await clickAndWait(make)
+        await getModels()
+      }
+    }
+  } else {
+    await getModels()
+  }
+}
 
 const catchData = async () => {
   // 获取 years 列表
   const years = document.getElementById('combo-1060-picker-listEl').children
-  if (!years) {
-    console.error("Element with ID 'combo-1060-picker-listEl' not found.")
-    return
-  }
   const yearsArray = Array.from(years)
-
   // 主循环，遍历 years 列表
   for (let year of yearsArray) {
     await clickAndWait(year)
-    // 循环处理 makes
-    const makes = document.getElementById('combo-1061-picker-listEl').children
-    const makesArray = Array.from(makes)
-    for (let make of makesArray) {
-      await clickAndWait(make)
-      // 循环处理 models
-      const models = document.getElementById(
-        'combo-1062-picker-listEl'
-      ).children
-      const modelsArray = Array.from(models)
-      for (let model of modelsArray) {
-        await clickAndWait(model)
-        // 循环处理 parts
-        const parts = document.getElementById(
-          'combo-1063-picker-listEl'
-        ).children
-        for (let part of parts) {
-          await clickAndWait(part)
-          // 循环处理 engines
-          const engines = document.getElementById(
-            'combo-1064-picker-listEl'
-          ).children
-          for (let engine of engines) {
-            await clickAndWaitMore(engine)
-            console.log(window.lastResult)
-            await makeFetchRequest() // 等待 fetch 请求完成
-          }
-        }
-      }
-    }
+    await getMakes()
   }
 }
 
