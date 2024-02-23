@@ -6,78 +6,57 @@ import PartModel from '@src/mongodb/models/part'
 // **** Functions **** //
 
 const addParts = async (req: IReq, res: IRes) => {
-  const { xmlString } = req.body
-  const parts = xmlParser(xmlString).partsdata || []
+  const { xmlString, year, make, model, type, engine } = req.body
+  let parts = xmlParser(xmlString).partsdata || []
+  if (typeof parts === 'object' && !Array.isArray(parts)) {
+    parts = [parts]
+  }
   try {
-    if (parts) {
-      // 如果parts是一个对象，处理单个部件
-      if (typeof parts === 'object' && !Array.isArray(parts)) {
-        const part = parts
-        const filteredPart = { ...part }
-        delete filteredPart.part_no
-        delete filteredPart.supplier
-        delete filteredPart.part_type
-        delete filteredPart.qty
-        const existingPart = await PartModel.findOne({
-          partNumber: part.part_no['#text']
-        })
-        if (!existingPart) {
-          try {
-            const newPart = new PartModel({
-              partNumber: part.part_no['#text'],
-              supplier: part.supplier['#text'],
-              partType: part.part_type['#text'],
-              qty: part.qty['#text'],
-              othersByJson: JSON.stringify({ ...filteredPart })
-            })
-            await newPart.save()
-          } catch (error) {
-            console.log(
-              `Skipping duplicate partNumber: ${part.part_no['#text']}`
-            )
-          }
-        } else {
-          console.log(`Skipping duplicate partNumber: ${part.part_no['#text']}`)
+    const partsToAdd = parts.map(async (part: any) => {
+      const filteredPart = { ...part }
+      delete filteredPart.part_no
+      delete filteredPart.supplier
+      delete filteredPart.part_type
+      delete filteredPart.qty
+      delete filteredPart.application
+      const existingPart = await PartModel.findOne({
+        partNumber: part.part_no['#text'],
+        application: part.application['#text'] || '',
+        year,
+        make,
+        model,
+        type,
+        engine
+      })
+      if (!existingPart) {
+        const newPart = {
+          year,
+          make,
+          model,
+          type,
+          engine,
+          partNumber: part.part_no['#text'],
+          application: part.application['#text'] || '',
+          supplier: part.supplier['#text'],
+          partType: part.part_type['#text'],
+          qty: part.qty['#text'],
+          othersByJson: JSON.stringify({ ...filteredPart })
         }
-      } else if (Array.isArray(parts)) {
-        // 如果parts是一个数组，按照原先的逻辑处理多个部件
-        parts.forEach(async (part: any) => {
-          const filteredPart = { ...part }
-          delete filteredPart.part_no
-          delete filteredPart.supplier
-          delete filteredPart.part_type
-          delete filteredPart.qty
-          const existingPart = await PartModel.findOne({
-            partNumber: part.part_no['#text']
-          })
-          if (!existingPart) {
-            try {
-              const newPart = new PartModel({
-                partNumber: part.part_no['#text'],
-                supplier: part.supplier['#text'],
-                partType: part.part_type['#text'],
-                qty: part.qty['#text'],
-                othersByJson: JSON.stringify({ ...filteredPart })
-              })
-              await newPart.save()
-            } catch (error) {
-              console.log(
-                `Skipping duplicate partNumber: ${part.part_no['#text']}`
-              )
-            }
-          } else {
-            console.log(
-              `Skipping duplicate partNumber: ${part.part_no['#text']}`
-            )
-          }
-        })
+        return newPart
+      } else {
+        console.log(`Skipping duplicate partNumber: ${part.part_no['#text']}`)
+        return null
       }
-      return res.status(HttpStatusCodes.OK).json({ success: true })
-    } else {
-      return res.status(HttpStatusCodes.OK)
-    }
+    })
+    const results = await Promise.all(partsToAdd)
+    const newParts = results.filter(
+      (part: any) => part !== null && part !== undefined
+    )
+    const partsResult = await PartModel.insertMany(newParts)
+    return res
+      .status(HttpStatusCodes.OK)
+      .json({ success: true, parts: partsResult })
   } catch (error) {
-    console.log(parts)
     console.error(error)
   }
 }
