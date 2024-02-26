@@ -46,6 +46,14 @@
         }, retryDelay * retryCount) // 使用增加的延时来重试
       } else {
         console.error(`Failed after ${maxRetries} retries`)
+        // 打印当前的 year, make, model, type, engine
+        console.log('Error occurred for:', {
+          year: year,
+          make: make,
+          model: model,
+          type: type,
+          engine: engine
+        })
       }
     }
 
@@ -100,59 +108,117 @@ const getEngines = async (year, make, model, type) => {
   }
 }
 const getType = async (year, make, model) => {
-  // 循环处理 parts
+  const typeInput = document.getElementById('combo-1063-inputEl')
   const types = document.getElementById('combo-1063-picker-listEl')?.children
-  if (types) {
-    const typesArray = Array.from(types)
-    if (typesArray.length > 0) {
-      for (let type of typesArray) {
-        await clickAndWait(type)
-        await getEngines(year, make, model, type.textContent)
-      }
-    }
+
+  if (typeInput.value) {
+    await getEngines(year, make, model, typeInput.value)
   } else {
-    await getEngines()
+    // Loop through parts
+    if (types) {
+      const typesArray = Array.from(types)
+      if (typesArray.length > 0) {
+        for (let type of typesArray) {
+          await clickAndWait(type)
+          await getEngines(year, make, model, type.textContent)
+        }
+      }
+    } else {
+      await getEngines()
+    }
   }
 }
+
 const getModels = async (year, make) => {
-  // 循环处理 models
+  const modelInput = document.getElementById('combo-1062-inputEl')
   const models = document.getElementById('combo-1062-picker-listEl')?.children
-  if (models) {
+
+  if (modelInput.value) {
     const modelsArray = Array.from(models)
-    if (modelsArray.length > 0) {
-      for (let model of modelsArray) {
+    const startIndex = modelsArray.findIndex(
+      model => model.textContent === modelInput.value
+    )
+
+    if (startIndex !== -1) {
+      for (let i = startIndex; i < modelsArray.length; i++) {
+        const model = modelsArray[i]
         await clickAndWait(model)
         await getType(year, make, model.textContent)
       }
+    } else {
+      console.error('Model not found in the list')
     }
   } else {
-    await getType()
+    // Loop through models
+    if (models) {
+      const modelsArray = Array.from(models)
+      if (modelsArray.length > 0) {
+        for (let model of modelsArray) {
+          await clickAndWait(model)
+          await getType(year, make, model.textContent)
+        }
+      }
+    } else {
+      await getType()
+    }
   }
 }
 const getMakes = async year => {
-  // 循环处理 makes
+  const makeInput = document.getElementById('combo-1061-inputEl')
   const makes = document.getElementById('combo-1061-picker-listEl')?.children
-  if (makes) {
+  if (makeInput.value) {
     const makesArray = Array.from(makes)
-    if (makesArray.length > 0) {
-      for (let make of makesArray) {
+    const startIndex = makesArray.findIndex(
+      make => make.textContent === makeInput.value
+    )
+    if (startIndex !== -1) {
+      for (let i = startIndex; i < makesArray.length; i++) {
+        const make = makesArray[i]
         await clickAndWait(make)
         await getModels(year, make.textContent)
       }
+    } else {
+      console.error('Make not found in the list')
     }
   } else {
-    await getModels()
+    // Loop through makes
+    if (makes) {
+      const makesArray = Array.from(makes)
+      if (makesArray.length > 0) {
+        for (let make of makesArray) {
+          await clickAndWait(make)
+          await getModels(year, make.textContent)
+        }
+      }
+    } else {
+      await getModels()
+    }
   }
 }
 
 const catchData = async () => {
-  // 获取 years 列表
+  const yearInput = document.getElementById('combo-1060-inputEl')
   const years = document.getElementById('combo-1060-picker-listEl').children
   const yearsArray = Array.from(years)
-  // 主循环，遍历 years 列表
-  for (let year of yearsArray) {
-    await clickAndWait(year)
-    await getMakes(year.textContent)
+  if (yearInput.value) {
+    const startIndex = yearsArray.findIndex(
+      year => year.textContent === yearInput.value
+    )
+    if (startIndex !== -1) {
+      for (let i = startIndex; i < yearsArray.length; i++) {
+        const year = yearsArray[i]
+        await clickAndWait(year)
+        await getMakes(year.textContent)
+      }
+    } else {
+      console.error('Year not found in the list')
+    }
+  } else {
+    // 主循环，遍历 years 列表
+    for (let year of yearsArray) {
+      await clickAndWait(year)
+      await getMakes(year.textContent)
+    }
   }
 }
 
