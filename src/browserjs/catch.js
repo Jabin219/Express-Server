@@ -1,3 +1,23 @@
+let yearContent, makeContent, modelContent, typeContent, engineContent
+const parser = new DOMParser()
+const xmlDoc = parser.parseFromString(window.lastResult, 'text/xml')
+const partsDataElements = xmlDoc.getElementsByTagName('partsdata')
+console.log(partsDataElements)
+if (partsDataElements.length > 0) {
+  await makeFetchRequest(
+    yearContent,
+    makeContent,
+    modelContent,
+    typeContent,
+    engineContent
+  )
+}
+const responseParser = result => {
+  const parser = new DOMParser()
+  const xmlDoc = parser.parseFromString(result, 'text/xml')
+  console.log(xmlDoc)
+  return xmlDoc
+}
 ;(async function () {
   var oldOpen = XMLHttpRequest.prototype.open
   var oldSend = XMLHttpRequest.prototype.send
@@ -10,24 +30,22 @@
     this._pass = pass // 保存pass到XHR对象上，供重试时使用
     oldOpen.call(this, method, url, async, user, pass)
   }
-
   XMLHttpRequest.prototype.send = function (data) {
     var self = this
     var retryCount = 0
     var maxRetries = 3 // 最大重试次数
     var retryDelay = 1000 // 重试之间的延时，单位毫秒
 
-    function handleLoad() {
+    const handleLoad = () => {
       if (self.status >= 200 && self.status < 300) {
-        // 请求成功
-        window.lastResult = self.responseText // 存储请求的响应数据
+        const text = responseParser(self.responseText)
+        console.log(text)
+        window.lastResult = self.responseText
       } else {
-        // 请求失败，尝试重试
         handleError()
       }
     }
-
-    function handleError() {
+    const handleError = () => {
       if (retryCount < maxRetries) {
         retryCount++
         setTimeout(function () {
@@ -43,20 +61,11 @@
           self.addEventListener('load', handleLoad)
           self.addEventListener('error', handleError)
           oldSend.call(self, data)
-        }, retryDelay * retryCount) // 使用增加的延时来重试
+        }, retryDelay * retryCount)
       } else {
         console.error(`Failed after ${maxRetries} retries`)
-        // 打印当前的 year, make, model, type, engine
-        console.log('Error occurred for:', {
-          year: year,
-          make: make,
-          model: model,
-          type: type,
-          engine: engine
-        })
       }
     }
-
     this.addEventListener('load', handleLoad)
     this.addEventListener('error', handleError)
     oldSend.call(this, data)
@@ -64,14 +73,15 @@
 })()
 const sleep = milliseconds =>
   new Promise(resolve => setTimeout(resolve, milliseconds))
-const clickAndWait = async element => {
+const clickAndWait = async (element, time) => {
   element.click()
-  await sleep(2000) // 等待异步操作完成，可以根据实际情况调整等待时间
+  await sleep(time)
 }
 
 const makeFetchRequest = async (year, make, model, type, engine) => {
   try {
-    const response = await fetch('http://localhost:8081/api/parts/add', {
+    // const response = await fetch('http://localhost:8080/api/parts/add', {
+    const response = await fetch('http://3.18.104.4:8080/api/parts/add', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -91,35 +101,34 @@ const makeFetchRequest = async (year, make, model, type, engine) => {
     console.error('Fetch error:', error)
   }
 }
-const getEngines = async (year, make, model, type) => {
+
+const getEngines = async () => {
   // 循环处理 engines
   const engines = document.getElementById('combo-1064-picker-listEl')?.children
   if (engines) {
     const enginesArray = Array.from(engines)
     if (enginesArray.length > 0) {
       for (let engine of enginesArray) {
-        await clickAndWait(engine)
-        await makeFetchRequest(year, make, model, type, engine.textContent) // 等待 fetch 请求完成
+        engineContent = engine.textContent || 'All'
+        await clickAndWait(engine, 2000)
       }
     }
-  } else {
-    await makeFetchRequest(year, make, model, type, 'All') // 等待 fetch 请求完成
   }
 }
-const getType = async (year, make, model) => {
+const getType = async () => {
   const typeInput = document.getElementById('combo-1063-inputEl')
   const types = document.getElementById('combo-1063-picker-listEl')?.children
-
   if (typeInput.value) {
-    await getEngines(year, make, model, typeInput.value)
+    await getEngines()
   } else {
     // Loop through parts
     if (types) {
       const typesArray = Array.from(types)
       if (typesArray.length > 0) {
         for (let type of typesArray) {
-          await clickAndWait(type)
-          await getEngines(year, make, model, type.textContent)
+          typeContent = type.textContent
+          await clickAndWait(type, 1000)
+          await getEngines()
         }
       }
     } else {
@@ -128,21 +137,20 @@ const getType = async (year, make, model) => {
   }
 }
 
-const getModels = async (year, make) => {
+const getModels = async () => {
   const modelInput = document.getElementById('combo-1062-inputEl')
   const models = document.getElementById('combo-1062-picker-listEl')?.children
-
   if (modelInput.value) {
     const modelsArray = Array.from(models)
     const startIndex = modelsArray.findIndex(
       model => model.textContent === modelInput.value
     )
-
     if (startIndex !== -1) {
       for (let i = startIndex; i < modelsArray.length; i++) {
         const model = modelsArray[i]
-        await clickAndWait(model)
-        await getType(year, make, model.textContent)
+        modelContent = model.textContent
+        await clickAndWait(model, 1000)
+        await getType()
       }
     } else {
       console.error('Model not found in the list')
@@ -153,8 +161,9 @@ const getModels = async (year, make) => {
       const modelsArray = Array.from(models)
       if (modelsArray.length > 0) {
         for (let model of modelsArray) {
-          await clickAndWait(model)
-          await getType(year, make, model.textContent)
+          modelContent = model.textContent
+          await clickAndWait(model, 1000)
+          await getType()
         }
       }
     } else {
@@ -162,7 +171,7 @@ const getModels = async (year, make) => {
     }
   }
 }
-const getMakes = async year => {
+const getMakes = async () => {
   const makeInput = document.getElementById('combo-1061-inputEl')
   const makes = document.getElementById('combo-1061-picker-listEl')?.children
   if (makeInput.value) {
@@ -173,8 +182,9 @@ const getMakes = async year => {
     if (startIndex !== -1) {
       for (let i = startIndex; i < makesArray.length; i++) {
         const make = makesArray[i]
-        await clickAndWait(make)
-        await getModels(year, make.textContent)
+        makeContent = make.textContent
+        await clickAndWait(make, 1000)
+        await getModels()
       }
     } else {
       console.error('Make not found in the list')
@@ -185,8 +195,9 @@ const getMakes = async year => {
       const makesArray = Array.from(makes)
       if (makesArray.length > 0) {
         for (let make of makesArray) {
-          await clickAndWait(make)
-          await getModels(year, make.textContent)
+          makeContent = make.textContent
+          await clickAndWait(make, 2000)
+          await getModels()
         }
       }
     } else {
@@ -206,8 +217,9 @@ const catchData = async () => {
     if (startIndex !== -1) {
       for (let i = startIndex; i < yearsArray.length; i++) {
         const year = yearsArray[i]
-        await clickAndWait(year)
-        await getMakes(year.textContent)
+        yearContent = year.textContent
+        await clickAndWait(year, 2000)
+        await getMakes()
       }
     } else {
       console.error('Year not found in the list')
@@ -215,8 +227,9 @@ const catchData = async () => {
   } else {
     // 主循环，遍历 years 列表
     for (let year of yearsArray) {
-      await clickAndWait(year)
-      await getMakes(year.textContent)
+      yearContent = year.textContent
+      await clickAndWait(year, 2000)
+      await getMakes()
     }
   }
 }
