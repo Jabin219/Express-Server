@@ -22,6 +22,7 @@ const addParts = async (req: IReq, res: IRes) => {
       const existingPart = await PartModel.findOne({
         partNumber: part.part_no['#text'],
         application: part.application['#text'] || '',
+        supplier: part.supplier['#text'],
         year,
         make,
         model,

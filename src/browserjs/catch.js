@@ -103,7 +103,6 @@ const getEngines = async (year, make, model, type) => {
       }
     }
   } else {
-    console.log(window.lastResult)
     await makeFetchRequest(year, make, model, type, 'All') // 等待 fetch 请求完成
   }
 }

@@ -43,3 +43,6 @@ Run production build with a different env file.
 - If `npm run dev` gives you issues with bcrypt on MacOS you may need to run: `npm rebuild bcrypt --build-from-source`. 
 # Express-Server
 # qte-part-crawler
+
+start in remote server:
+`pm2 start ./dist --name app --node-args="-r module-alias/register" -- --env=production`

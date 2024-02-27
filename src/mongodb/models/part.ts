@@ -41,6 +41,7 @@ partSchema.index(
   {
     partNumber: 1,
     application: 1,
+    supplier: 1,
     year: 1,
     make: 1,
     model: 1,
