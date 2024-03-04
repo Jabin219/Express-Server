@@ -1,21 +1,6 @@
-let yearContent, makeContent, modelContent, typeContent, engineContent
-const parser = new DOMParser()
-const xmlDoc = parser.parseFromString(window.lastResult, 'text/xml')
-const partsDataElements = xmlDoc.getElementsByTagName('partsdata')
-console.log(partsDataElements)
-if (partsDataElements.length > 0) {
-  await makeFetchRequest(
-    yearContent,
-    makeContent,
-    modelContent,
-    typeContent,
-    engineContent
-  )
-}
 const responseParser = result => {
   const parser = new DOMParser()
   const xmlDoc = parser.parseFromString(result, 'text/xml')
-  console.log(xmlDoc)
   return xmlDoc
 }
 ;(async function () {
@@ -35,12 +20,30 @@ const responseParser = result => {
     var retryCount = 0
     var maxRetries = 3 // 最大重试次数
     var retryDelay = 1000 // 重试之间的延时，单位毫秒
-
     const handleLoad = () => {
       if (self.status >= 200 && self.status < 300) {
-        const text = responseParser(self.responseText)
-        console.log(text)
         window.lastResult = self.responseText
+        const result = responseParser(window.lastResult).documentElement.tagName
+        if (result == 'ShowMeThePartsDetail') {
+          let yearContent =
+            document.getElementById('combo-1060-inputEl').value || null
+          let makeContent =
+            document.getElementById('combo-1061-inputEl').value || null
+          let modelContent =
+            document.getElementById('combo-1062-inputEl').value || null
+          let typeContent =
+            document.getElementById('combo-1063-inputEl').value || null
+          let engineContent =
+            document.getElementById('combo-1064-inputEl').value || 'All'
+          makeFetchRequest(
+            window.lastResult,
+            yearContent,
+            makeContent,
+            modelContent,
+            typeContent,
+            engineContent
+          )
+        }
       } else {
         handleError()
       }
@@ -71,23 +74,17 @@ const responseParser = result => {
     oldSend.call(this, data)
   }
 })()
-const sleep = milliseconds =>
-  new Promise(resolve => setTimeout(resolve, milliseconds))
-const clickAndWait = async (element, time) => {
-  element.click()
-  await sleep(time)
-}
 
-const makeFetchRequest = async (year, make, model, type, engine) => {
+const makeFetchRequest = async (xmlString, year, make, model, type, engine) => {
   try {
-    // const response = await fetch('http://localhost:8080/api/parts/add', {
+    // const response = await fetch('http://localhost:8081/api/parts/add', {
     const response = await fetch('http://3.18.104.4:8080/api/parts/add', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        xmlString: window.lastResult,
+        xmlString,
         year,
         make,
         model,
@@ -97,42 +94,45 @@ const makeFetchRequest = async (year, make, model, type, engine) => {
     })
     const data = await response.json()
     console.log('Fetch response:', data)
+    return data
   } catch (error) {
     console.error('Fetch error:', error)
   }
 }
-
 const getEngines = async () => {
-  // 循环处理 engines
   const engines = document.getElementById('combo-1064-picker-listEl')?.children
   if (engines) {
     const enginesArray = Array.from(engines)
     if (enginesArray.length > 0) {
       for (let engine of enginesArray) {
-        engineContent = engine.textContent || 'All'
-        await clickAndWait(engine, 2000)
+        engine.click()
+        await new Promise(resolve => setTimeout(resolve, 4000))
       }
     }
   }
 }
-const getType = async () => {
+const getTypes = async () => {
   const typeInput = document.getElementById('combo-1063-inputEl')
   const types = document.getElementById('combo-1063-picker-listEl')?.children
-  if (typeInput.value) {
-    await getEngines()
-  } else {
-    // Loop through parts
-    if (types) {
-      const typesArray = Array.from(types)
-      if (typesArray.length > 0) {
-        for (let type of typesArray) {
-          typeContent = type.textContent
-          await clickAndWait(type, 1000)
-          await getEngines()
+  if (types) {
+    const typesArray = Array.from(types)
+    if (typesArray.length > 0) {
+      if (typeInput) {
+        const typeIndex = typesArray.findIndex(
+          type => type.textContent.trim() === typeInput.value
+        )
+        if (typeIndex !== -1) {
+          typesArray.splice(0, modelsArray)
         }
       }
-    } else {
-      await getEngines()
+      for (let type of typesArray) {
+        await waitForNextList(
+          type,
+          'combo-1064-picker-listEl',
+          'combo-1064-trigger-picker'
+        )
+        await getEngines()
+      }
     }
   }
 }
@@ -140,68 +140,50 @@ const getType = async () => {
 const getModels = async () => {
   const modelInput = document.getElementById('combo-1062-inputEl')
   const models = document.getElementById('combo-1062-picker-listEl')?.children
-  if (modelInput.value) {
+  if (models) {
     const modelsArray = Array.from(models)
-    const startIndex = modelsArray.findIndex(
-      model => model.textContent === modelInput.value
-    )
-    if (startIndex !== -1) {
-      for (let i = startIndex; i < modelsArray.length; i++) {
-        const model = modelsArray[i]
-        modelContent = model.textContent
-        await clickAndWait(model, 1000)
-        await getType()
-      }
-    } else {
-      console.error('Model not found in the list')
-    }
-  } else {
-    // Loop through models
-    if (models) {
-      const modelsArray = Array.from(models)
-      if (modelsArray.length > 0) {
-        for (let model of modelsArray) {
-          modelContent = model.textContent
-          await clickAndWait(model, 1000)
-          await getType()
+    if (modelsArray.length > 0) {
+      if (modelInput) {
+        const modelIndex = modelsArray.findIndex(
+          model => model.textContent.trim() === modelInput.value
+        )
+        if (modelIndex !== -1) {
+          modelsArray.splice(0, modelsArray)
         }
       }
-    } else {
-      await getType()
+      for (let model of modelsArray) {
+        await waitForNextList(
+          model,
+          'combo-1063-picker-listEl',
+          'combo-1063-trigger-picker'
+        )
+        await getTypes()
+      }
     }
   }
 }
 const getMakes = async () => {
   const makeInput = document.getElementById('combo-1061-inputEl')
   const makes = document.getElementById('combo-1061-picker-listEl')?.children
-  if (makeInput.value) {
+  if (makes) {
     const makesArray = Array.from(makes)
-    const startIndex = makesArray.findIndex(
-      make => make.textContent === makeInput.value
-    )
-    if (startIndex !== -1) {
-      for (let i = startIndex; i < makesArray.length; i++) {
-        const make = makesArray[i]
-        makeContent = make.textContent
-        await clickAndWait(make, 1000)
-        await getModels()
-      }
-    } else {
-      console.error('Make not found in the list')
-    }
-  } else {
-    // Loop through makes
-    if (makes) {
-      const makesArray = Array.from(makes)
-      if (makesArray.length > 0) {
-        for (let make of makesArray) {
-          makeContent = make.textContent
-          await clickAndWait(make, 2000)
-          await getModels()
+    if (makesArray.length > 0) {
+      if (makeInput) {
+        const makeIndex = makesArray.findIndex(
+          make => make.textContent.trim() === makeInput.value
+        )
+        if (makeIndex !== -1) {
+          makesArray.splice(0, makeIndex)
         }
       }
-    } else {
-      await getModels()
+      for (let make of makesArray) {
+        await waitForNextList(
+          make,
+          'combo-1062-picker-listEl',
+          'combo-1062-trigger-picker'
+        )
+        await getModels()
+      }
     }
   }
 }
@@ -210,28 +192,51 @@ const catchData = async () => {
   const yearInput = document.getElementById('combo-1060-inputEl')
   const years = document.getElementById('combo-1060-picker-listEl').children
   const yearsArray = Array.from(years)
-  if (yearInput.value) {
-    const startIndex = yearsArray.findIndex(
-      year => year.textContent === yearInput.value
+  if (yearInput) {
+    const yearIndex = yearsArray.findIndex(
+      year => year.textContent.trim() === yearInput.value
     )
-    if (startIndex !== -1) {
-      for (let i = startIndex; i < yearsArray.length; i++) {
-        const year = yearsArray[i]
-        yearContent = year.textContent
-        await clickAndWait(year, 2000)
-        await getMakes()
-      }
-    } else {
-      console.error('Year not found in the list')
-    }
-  } else {
-    // 主循环，遍历 years 列表
-    for (let year of yearsArray) {
-      yearContent = year.textContent
-      await clickAndWait(year, 2000)
-      await getMakes()
+    if (yearIndex !== -1) {
+      yearsArray.splice(0, yearIndex)
     }
   }
+  for (let year of yearsArray) {
+    await waitForNextList(
+      year,
+      'combo-1061-picker-listEl',
+      'combo-1061-trigger-picker'
+    )
+    await getMakes()
+  }
 }
-
+const waitForNextList = (element, nextId, triggerId) => {
+  const targetNode = document.getElementById(nextId)
+  return new Promise((resolve, reject) => {
+    if (!targetNode) {
+      element.click()
+      setTimeout(() => {
+        resolve()
+      }, 3000)
+      return
+    } else {
+      while (targetNode.firstChild) {
+        targetNode.removeChild(targetNode.firstChild)
+      }
+      const trigger = document.getElementById(triggerId)
+      trigger.click()
+    }
+    const observer = new MutationObserver((mutations, observer) => {
+      for (let mutation of mutations) {
+        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+          resolve()
+          observer.disconnect()
+        }
+      }
+    })
+    observer.observe(targetNode, {
+      childList: true
+    })
+    element.click()
+  })
+}
 catchData()

@@ -19,10 +19,14 @@ const addParts = async (req: IReq, res: IRes) => {
       delete filteredPart.part_type
       delete filteredPart.qty
       delete filteredPart.application
+      delete filteredPart.location
+      delete filteredPart.brand
       const existingPart = await PartModel.findOne({
         partNumber: part.part_no['#text'],
         application: part.application['#text'] || '',
         supplier: part.supplier['#text'],
+        location: part.location['#text'] || '',
+        brand: part.brand['#text'] || '',
         year,
         make,
         model,
@@ -41,6 +45,8 @@ const addParts = async (req: IReq, res: IRes) => {
           supplier: part.supplier['#text'],
           partType: part.part_type['#text'],
           qty: part.qty['#text'],
+          location: part.location['#text'] || '',
+          brand: part.brand['#text'] || '',
           othersByJson: JSON.stringify({ ...filteredPart })
         }
         return newPart

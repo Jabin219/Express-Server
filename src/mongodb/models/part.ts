@@ -8,7 +8,6 @@ export const partSchema = new Schema(
       type: String,
       required: true
     },
-    application: { type: String },
     year: {
       type: String,
       required: true
@@ -17,6 +16,9 @@ export const partSchema = new Schema(
     model: { type: String, required: true },
     type: { type: String, required: true },
     engine: { type: String, required: true },
+    application: { type: String },
+    location: { type: String },
+    brand: { type: String },
     supplier: {
       type: String,
       required: true
@@ -42,6 +44,8 @@ partSchema.index(
     partNumber: 1,
     application: 1,
     supplier: 1,
+    location: 1,
+    brand: 1,
     year: 1,
     make: 1,
     model: 1,
