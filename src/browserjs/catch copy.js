@@ -3,6 +3,11 @@ const responseParser = result => {
   const xmlDoc = parser.parseFromString(result, 'text/xml')
   return xmlDoc
 }
+let yearContent = ''
+let makeContent = ''
+let modelContent = ''
+let typeContent = ''
+let engineContent = ''
 ;(async function () {
   var oldOpen = XMLHttpRequest.prototype.open
   var oldSend = XMLHttpRequest.prototype.send
@@ -18,30 +23,28 @@ const responseParser = result => {
   XMLHttpRequest.prototype.send = function (data) {
     var self = this
     var retryCount = 0
-    var maxRetries = 3
-    var retryDelay = 2000
+    var maxRetries = 3 // 最大重试次数
+    var retryDelay = 1000 // 重试之间的延时，单位毫秒
     const handleLoad = async () => {
       if (self.status >= 200 && self.status < 300) {
         window.lastResult = self.responseText
         const result = responseParser(window.lastResult).documentElement.tagName
         if (result == 'ShowMeThePartsDetail') {
-          let yearContent =
-            document.getElementById('combo-1060-inputEl').value || ''
-          let makeContent =
-            document.getElementById('combo-1061-inputEl').value || 'unknown'
-          let modelContent =
-            document.getElementById('combo-1062-inputEl').value || 'unknown'
-          let typeContent =
-            document.getElementById('combo-1063-inputEl').value || 'unknown'
-          let engineContent =
-            document.getElementById('combo-1064-inputEl').value || 'All'
           await makeFetchRequest(
             window.lastResult,
             yearContent,
-            makeContent,
-            modelContent,
-            typeContent,
-            engineContent
+            makeContent ||
+              document.getElementById('combo-1061-inputEl').value ||
+              'All',
+            modelContent ||
+              document.getElementById('combo-1062-inputEl').value ||
+              'All',
+            typeContent ||
+              document.getElementById('combo-1063-inputEl').value ||
+              'All',
+            engineContent ||
+              document.getElementById('combo-1064-inputEl').value ||
+              'All'
           )
         }
       } else {
@@ -67,24 +70,6 @@ const responseParser = result => {
         }, retryDelay * retryCount)
       } else {
         console.error(`Failed after ${maxRetries} retries`)
-        let yearContent =
-          document.getElementById('combo-1060-inputEl').value || ''
-        let makeContent =
-          document.getElementById('combo-1061-inputEl').value || 'unknown'
-        let modelContent =
-          document.getElementById('combo-1062-inputEl').value || 'unknown'
-        let typeContent =
-          document.getElementById('combo-1063-inputEl').value || 'unknown'
-        let engineContent =
-          document.getElementById('combo-1064-inputEl').value || 'All'
-        console.log(
-          yearContent,
-          makeContent,
-          modelContent,
-          typeContent,
-          engineContent
-        )
-        return
       }
     }
     this.addEventListener('load', handleLoad)
@@ -101,7 +86,6 @@ const makeFetchRequest = async (xmlString, year, make, model, type, engine) => {
       headers: {
         'Content-Type': 'application/json'
       },
-      credentials: 'include',
       body: JSON.stringify({
         xmlString,
         year,
@@ -112,6 +96,7 @@ const makeFetchRequest = async (xmlString, year, make, model, type, engine) => {
       })
     })
     const data = await response.json()
+    console.log('Fetch response:', data)
     return data
   } catch (error) {
     console.error('Fetch error:', error)
@@ -124,33 +109,46 @@ const getEngines = async () => {
     if (enginesArray.length > 1) {
       for (let engine of enginesArray) {
         engine.click()
-        await new Promise(resolve => setTimeout(resolve, 10000))
+        await new Promise((resolve, reject) => {
+          setTimeout(resolve, 5000)
+        })
       }
     } else {
-      await new Promise(resolve => setTimeout(resolve, 10000))
+      await new Promise((resolve, reject) => {
+        setTimeout(resolve, 5000)
+      })
     }
   }
 }
 const getTypes = async () => {
   const typeInput = document.getElementById('combo-1063-inputEl')
   const types = document.getElementById('combo-1063-picker-listEl')?.children
+  let targetNodeExistsInitially = document.getElementById('loadmask-1433')
   if (types) {
     const typesArray = Array.from(types)
-    if (typesArray.length > 1) {
+    if (typesArray.length > 0) {
       if (typeInput) {
         const typeIndex = typesArray.findIndex(
           type => type.textContent.trim() === typeInput.value
         )
         if (typeIndex !== -1) {
-          typesArray.splice(0, typeIndex)
+          typesArray.splice(0, modelsArray)
         }
       }
-      for (let type of typesArray) {
-        await waitForNextList(type, 'combo-1064-picker-listEl')
+      if (!targetNodeExistsInitially && typesArray.length > 0) {
+        typesArray[0].click()
+        await new Promise(resolve => setTimeout(resolve, 500))
+      }
+      if (typesArray.length > 1) {
+        for (let type of typesArray) {
+          typeContent = type.innerHTML
+          await waitForNextList(type, 'loadmask-1433')
+          await getEngines()
+        }
+      } else {
+        typeContent = typesArray[0].innerHTML
         await getEngines()
       }
-    } else {
-      await getEngines()
     }
   }
 }
@@ -158,32 +156,37 @@ const getTypes = async () => {
 const getModels = async () => {
   const modelInput = document.getElementById('combo-1062-inputEl')
   const models = document.getElementById('combo-1062-picker-listEl')?.children
+  let targetNodeExistsInitially = document.getElementById('loadmask-1431')
   if (models) {
     const modelsArray = Array.from(models)
-    if (modelsArray.length > 1) {
+    if (modelsArray.length > 0) {
       if (modelInput) {
         const modelIndex = modelsArray.findIndex(
           model => model.textContent.trim() === modelInput.value
         )
         if (modelIndex !== -1) {
-          modelsArray.splice(0, modelIndex)
+          modelsArray.splice(0, modelsArray)
         }
       }
+      if (!targetNodeExistsInitially && modelsArray.length > 0) {
+        modelsArray[0].click()
+        await new Promise(resolve => setTimeout(resolve, 500))
+      }
       for (let model of modelsArray) {
-        await waitForNextList(model, 'combo-1063-picker-listEl')
+        modelContent = model.innerHTML
+        await waitForNextList(model, 'loadmask-1431')
         await getTypes()
       }
-    } else {
-      await getTypes()
     }
   }
 }
 const getMakes = async () => {
   const makeInput = document.getElementById('combo-1061-inputEl')
   const makes = document.getElementById('combo-1061-picker-listEl')?.children
+  let targetNodeExistsInitially = document.getElementById('loadmask-1429')
   if (makes) {
     const makesArray = Array.from(makes)
-    if (makesArray.length > 1) {
+    if (makesArray.length > 0) {
       if (makeInput) {
         const makeIndex = makesArray.findIndex(
           make => make.textContent.trim() === makeInput.value
@@ -192,19 +195,24 @@ const getMakes = async () => {
           makesArray.splice(0, makeIndex)
         }
       }
+      if (!targetNodeExistsInitially && makesArray.length > 0) {
+        makesArray[0].click()
+        await new Promise(resolve => setTimeout(resolve, 500))
+      }
       for (let make of makesArray) {
-        await waitForNextList(make, 'combo-1062-picker-listEl')
+        makeContent = make.innerHTML
+        await waitForNextList(make, 'loadmask-1429')
         await getModels()
       }
-    } else {
-      await getModels()
     }
   }
 }
+
 const catchData = async () => {
   const yearInput = document.getElementById('combo-1060-inputEl')
   const years = document.getElementById('combo-1060-picker-listEl').children
   const yearsArray = Array.from(years)
+  let targetNodeExistsInitially = document.getElementById('loadmask-1427')
   if (yearInput) {
     const yearIndex = yearsArray.findIndex(
       year => year.textContent.trim() === yearInput.value
@@ -213,37 +221,45 @@ const catchData = async () => {
       yearsArray.splice(0, yearIndex)
     }
   }
+  if (!targetNodeExistsInitially && yearsArray.length > 0) {
+    yearsArray[0].click()
+    await new Promise(resolve => setTimeout(resolve, 500))
+  }
   for (let year of yearsArray) {
-    await waitForNextList(year, 'combo-1061-picker-listEl')
+    yearContent = year.innerHTML
+    await waitForNextList(year, 'loadmask-1427')
     await getMakes()
   }
 }
-const waitForNextList = (element, nextId) => {
-  const targetNode = document.getElementById(nextId)
+const waitForNextList = (element, targetId) => {
   return new Promise((resolve, reject) => {
-    if (!targetNode) {
-      element.click()
-      setTimeout(() => {
-        resolve()
-      }, 3000)
-      return
-    }
-    const observer = new MutationObserver((mutations, observer) => {
-      for (let mutation of mutations) {
-        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-          observer.disconnect()
-          resolve()
-        }
+    const checkAndObserve = () => {
+      const targetNode = document.getElementById(targetId)
+      if (targetNode) {
+        const observer = new MutationObserver(mutations => {
+          for (let mutation of mutations) {
+            if (mutation.attributeName === 'style') {
+              if (targetNode.style.display === 'none') {
+                observer.disconnect()
+                resolve()
+              }
+            }
+          }
+        })
+        observer.observe(targetNode, { attributes: true })
+        element.click()
+      } else {
+        element.click()
+        setTimeout(() => {
+          if (document.getElementById(targetId)) {
+            checkAndObserve()
+          } else {
+            resolve()
+          }
+        }, 500)
       }
-    })
-    observer.observe(targetNode, {
-      childList: true
-    })
-    element.click()
-    setTimeout(() => {
-      observer.disconnect()
-      resolve()
-    }, 10000)
+    }
+    checkAndObserve()
   })
 }
 catchData()
