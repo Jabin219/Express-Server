@@ -6,8 +6,8 @@ import PartModel from '@src/mongodb/models/part'
 // **** Functions **** //
 
 const addParts = async (req: IReq, res: IRes) => {
-  const { xmlString, year, make, model, type, engine } = req.body
-  let parts = xmlParser(xmlString).partsdata || []
+  const { resultJson, year, make, model, type, engine } = req.body
+  let parts = resultJson.partsdata || []
   if (typeof parts === 'object' && !Array.isArray(parts)) {
     parts = [parts]
   }

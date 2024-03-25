@@ -1,7 +1,31 @@
-const responseParser = result => {
-  const parser = new DOMParser()
-  const xmlDoc = parser.parseFromString(result, 'text/xml')
-  return xmlDoc
+const xmlToJson = xml => {
+  let obj = {}
+  if (xml.nodeType === 1) {
+    const element = xml
+    for (let i = 0; i < element.attributes.length; i++) {
+      const attribute = element.attributes[i]
+      obj[attribute.nodeName] = attribute.nodeValue
+    }
+    for (let j = 0; j < xml.childNodes.length; j++) {
+      const item = xml.childNodes[j]
+      const nodeName = item.nodeName
+      if (typeof obj[nodeName] === 'undefined') {
+        obj[nodeName] = xmlToJson(item)
+      } else {
+        if (typeof obj[nodeName].push === 'undefined') {
+          const old = obj[nodeName]
+          obj[nodeName] = []
+          obj[nodeName].push(old)
+        }
+        obj[nodeName].push(xmlToJson(item))
+      }
+    }
+  } else if (xml.nodeType === 3) {
+    if (xml.nodeValue !== null) {
+      obj = xml.nodeValue.trim()
+    }
+  }
+  return obj
 }
 ;(async function () {
   var oldOpen = XMLHttpRequest.prototype.open
@@ -23,8 +47,10 @@ const responseParser = result => {
     const handleLoad = async () => {
       if (self.status >= 200 && self.status < 300) {
         window.lastResult = self.responseText
-        const result = responseParser(window.lastResult).documentElement.tagName
-        if (result == 'ShowMeThePartsDetail') {
+        const parser = new DOMParser()
+        const result = parser.parseFromString(window.lastResult, 'text/xml')
+        const resultJson = xmlToJson(result.documentElement)
+        if (result.documentElement.tagName == 'ShowMeThePartsDetail') {
           let yearContent =
             document.getElementById('combo-1060-inputEl').value || ''
           let makeContent =
@@ -36,7 +62,7 @@ const responseParser = result => {
           let engineContent =
             document.getElementById('combo-1064-inputEl').value || 'All'
           await makeFetchRequest(
-            window.lastResult,
+            resultJson,
             yearContent,
             makeContent,
             modelContent,
@@ -93,7 +119,14 @@ const responseParser = result => {
   }
 })()
 
-const makeFetchRequest = async (xmlString, year, make, model, type, engine) => {
+const makeFetchRequest = async (
+  resultJson,
+  year,
+  make,
+  model,
+  type,
+  engine
+) => {
   try {
     // const response = await fetch('http://localhost:8081/api/parts/add', {
     const response = await fetch('http://3.18.104.4:8080/api/parts/add', {
@@ -101,9 +134,8 @@ const makeFetchRequest = async (xmlString, year, make, model, type, engine) => {
       headers: {
         'Content-Type': 'application/json'
       },
-      credentials: 'include',
       body: JSON.stringify({
-        xmlString,
+        resultJson,
         year,
         make,
         model,
@@ -115,6 +147,13 @@ const makeFetchRequest = async (xmlString, year, make, model, type, engine) => {
     return data
   } catch (error) {
     console.error('Fetch error:', error)
+    console.log(`Error occurred with parameters:
+      year: ${year},
+      make: ${make},
+      model: ${model},
+      type: ${type},
+      engine: ${engine}`)
+    await makeFetchRequest(resultJson, year, make, model, type, engine)
   }
 }
 const getEngines = async () => {
@@ -124,10 +163,10 @@ const getEngines = async () => {
     if (enginesArray.length > 1) {
       for (let engine of enginesArray) {
         engine.click()
-        await new Promise(resolve => setTimeout(resolve, 10000))
+        await new Promise(resolve => setTimeout(resolve, 8000))
       }
     } else {
-      await new Promise(resolve => setTimeout(resolve, 10000))
+      await new Promise(resolve => setTimeout(resolve, 8000))
     }
   }
 }
@@ -221,24 +260,18 @@ const catchData = async () => {
 const waitForNextList = (element, nextId) => {
   const targetNode = document.getElementById(nextId)
   return new Promise((resolve, reject) => {
-    if (!targetNode) {
-      element.click()
-      setTimeout(() => {
-        resolve()
-      }, 3000)
-      return
-    }
     const observer = new MutationObserver((mutations, observer) => {
       for (let mutation of mutations) {
         if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
           observer.disconnect()
-          resolve()
+          setTimeout(resolve, 4000)
+          return
         }
       }
     })
-    observer.observe(targetNode, {
-      childList: true
-    })
+    if (targetNode) {
+      observer.observe(targetNode, { childList: true })
+    }
     element.click()
     setTimeout(() => {
       observer.disconnect()
