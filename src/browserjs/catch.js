@@ -52,15 +52,18 @@ const xmlToJson = xml => {
         const resultJson = xmlToJson(result.documentElement)
         if (result.documentElement.tagName == 'ShowMeThePartsDetail') {
           let yearContent =
-            document.getElementById('combo-1060-inputEl').value || ''
+            document.getElementById('combo-1060-inputEl').value.trim() || ''
           let makeContent =
-            document.getElementById('combo-1061-inputEl').value || 'unknown'
+            document.getElementById('combo-1061-inputEl').value.trim() ||
+            'unknown'
           let modelContent =
-            document.getElementById('combo-1062-inputEl').value || 'unknown'
+            document.getElementById('combo-1062-inputEl').value.trim() ||
+            'unknown'
           let typeContent =
-            document.getElementById('combo-1063-inputEl').value || 'unknown'
+            document.getElementById('combo-1063-inputEl').value.trim() ||
+            'unknown'
           let engineContent =
-            document.getElementById('combo-1064-inputEl').value || 'All'
+            document.getElementById('combo-1064-inputEl').value.trim() || 'All'
           await makeFetchRequest(
             resultJson,
             yearContent,
@@ -94,15 +97,18 @@ const xmlToJson = xml => {
       } else {
         console.error(`Failed after ${maxRetries} retries`)
         let yearContent =
-          document.getElementById('combo-1060-inputEl').value || ''
+          document.getElementById('combo-1060-inputEl').value.trim() || ''
         let makeContent =
-          document.getElementById('combo-1061-inputEl').value || 'unknown'
+          document.getElementById('combo-1061-inputEl').value.trim() ||
+          'unknown'
         let modelContent =
-          document.getElementById('combo-1062-inputEl').value || 'unknown'
+          document.getElementById('combo-1062-inputEl').value.trim() ||
+          'unknown'
         let typeContent =
-          document.getElementById('combo-1063-inputEl').value || 'unknown'
+          document.getElementById('combo-1063-inputEl').value.trim() ||
+          'unknown'
         let engineContent =
-          document.getElementById('combo-1064-inputEl').value || 'All'
+          document.getElementById('combo-1064-inputEl').value.trim() || 'All'
         console.log(
           yearContent,
           makeContent,
@@ -178,7 +184,7 @@ const getTypes = async () => {
     if (typesArray.length > 1) {
       if (typeInput) {
         const typeIndex = typesArray.findIndex(
-          type => type.textContent.trim() === typeInput.value
+          type => type.textContent.trim() === typeInput.value.trim()
         )
         if (typeIndex !== -1) {
           typesArray.splice(0, typeIndex)
@@ -202,7 +208,7 @@ const getModels = async () => {
     if (modelsArray.length > 1) {
       if (modelInput) {
         const modelIndex = modelsArray.findIndex(
-          model => model.textContent.trim() === modelInput.value
+          model => model.textContent.trim() === modelInput.value.trim()
         )
         if (modelIndex !== -1) {
           modelsArray.splice(0, modelIndex)
@@ -225,7 +231,7 @@ const getMakes = async () => {
     if (makesArray.length > 1) {
       if (makeInput) {
         const makeIndex = makesArray.findIndex(
-          make => make.textContent.trim() === makeInput.value
+          make => make.textContent.trim() === makeInput.value.trim()
         )
         if (makeIndex !== -1) {
           makesArray.splice(0, makeIndex)
@@ -246,7 +252,7 @@ const catchData = async () => {
   const yearsArray = Array.from(years)
   if (yearInput) {
     const yearIndex = yearsArray.findIndex(
-      year => year.textContent.trim() === yearInput.value
+      year => year.textContent.trim() === yearInput.value.trim()
     )
     if (yearIndex !== -1) {
       yearsArray.splice(0, yearIndex)
