@@ -3,3 +3,4 @@ dist/
 **/**/*.log
 env/production.env
 
+.DS_Store
