@@ -13,6 +13,12 @@ export default {
   },
   Parts: {
     Base: '/parts',
-    Add: '/add'
+    Add: '/add',
+    Latest: '/latest'  // 新增获取最新零件的路径
+  },
+  Test: { // 添加新的 Test 路径
+    Base: '/test',
+    Add: '/add',
+    Latest: '/latest'  // 新增获取最新零件的路径
   }
 } as const

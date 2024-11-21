@@ -6,6 +6,7 @@ import User from '@src/models/User'
 import UserRoutes from './UserRoutes'
 import PartRoutes from './PartRoutes'
 
+
 // **** Variables **** //
 
 const apiRouter = Router(),
@@ -45,7 +46,14 @@ apiRouter.use(Paths.Users.Base, userRouter)
 // Add Parts
 const partRouter = Router()
 partRouter.post(Paths.Parts.Add, PartRoutes.addParts)
+
+// 新增 `GET` 路由以获取最新的零件
+partRouter.get(Paths.Parts.Latest, PartRoutes.getLatestParts)
+
 apiRouter.use(Paths.Parts.Base, partRouter)
+
+
+
 
 // **** Export default **** //
 

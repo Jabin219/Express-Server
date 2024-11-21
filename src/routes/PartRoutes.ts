@@ -1,7 +1,6 @@
-import HttpStatusCodes from '@src/constants/HttpStatusCodes'
-import { IReq, IRes } from './types/express/misc'
-import { xmlParser } from '@src/util'
-import PartModel from '@src/mongodb/models/part'
+import HttpStatusCodes from '@src/constants/HttpStatusCodes';
+import { IReq, IRes } from './types/express/misc';
+import PartModel from '@src/mongodb/models/part';
 
 // **** Functions **** //
 
@@ -68,8 +67,29 @@ const addParts = async (req: IReq, res: IRes) => {
   }
 }
 
+// 获取最新的零件数据
+const getLatestParts = async (req: IReq, res: IRes) => {
+  try {
+    // 查询数据库中最近创建的 10 条零件记录
+    const latestParts = await PartModel.find()
+      .sort({ createdAt: -1 }) // 按 createdAt 字段降序排列
+      .limit(1);               // 限制返回的记录数
+
+    // 打印最近的零件记录
+    console.log('Latest parts:', latestParts);
+
+    return res.status(HttpStatusCodes.OK).json({ success: true, latestParts });
+  } catch (error) {
+    console.error('Error occurred while fetching latest parts:', error);
+    return res
+      .status(HttpStatusCodes.INTERNAL_SERVER_ERROR)
+      .json({ error: 'An error occurred while fetching latest parts.' });
+  }
+};
+
 // **** Export default **** //
 
 export default {
-  addParts
-} as const
+  addParts,
+  getLatestParts,
+} as const;
