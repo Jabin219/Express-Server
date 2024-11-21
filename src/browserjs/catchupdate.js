@@ -115,8 +115,8 @@ const makeFetchRequest = async (resultJson, year, make, model, type, engine) => 
   console.log('准备发送以下数据到后端:', postData);
 
   try {
-    const response = await fetch('http://localhost:8081/api/parts/add', {
-      // const response = await fetch('http://3.18.104.4:8080/api/parts/add', {
+    // const response = await fetch('http://localhost:8081/api/parts/add', {
+      const response = await fetch('http://3.18.104.4:8080/api/parts/add', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -291,8 +291,8 @@ const continueCatching = async (lastIndices) => {
 // 开始抓取任务
 const fetchAndLocate = async () => {
   try {
-    const response = await fetch('http://localhost:8081/api/parts/latest');
-    // const response = await fetch('http://3.18.104.4:8080/api/parts/latest');
+    // const response = await fetch('http://localhost:8081/api/parts/latest');
+    const response = await fetch('http://3.18.104.4:8080/api/parts/latest');
 
     if (response.ok) {
       const data = await response.json();
