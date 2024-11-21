@@ -116,6 +116,7 @@ const makeFetchRequest = async (resultJson, year, make, model, type, engine) => 
 
   try {
     const response = await fetch('http://localhost:8081/api/parts/add', {
+      // const response = await fetch('http://3.18.104.4:8080/api/parts/add', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -237,7 +238,7 @@ if (engineIndex === -1) {
 };
 
 const continueCatching = async (lastIndices) => {
-  console.log('20秒后继续从定位位置抓取...');
+  console.log('25秒后继续从定位位置抓取...');
   const years = Array.from(document.querySelectorAll('#combo-1060-picker-listEl > *')).slice(lastIndices.yearIndex);
   for (let year of years) {
     await waitForNextList(year, 'combo-1061-picker-listEl');
@@ -291,6 +292,8 @@ const continueCatching = async (lastIndices) => {
 const fetchAndLocate = async () => {
   try {
     const response = await fetch('http://localhost:8081/api/parts/latest');
+    // const response = await fetch('http://3.18.104.4:8080/api/parts/latest');
+
     if (response.ok) {
       const data = await response.json();
       const lastData = data.latestParts?.[0];
