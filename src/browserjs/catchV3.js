@@ -1,7 +1,4 @@
 // the correct version that can located latest data from database, can then recusive automatic catch form latest. 
-// 延迟函数：用于控制异步等待
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
 const xmlToJson = xml => {
   let obj = {};
   if (xml.nodeType === 1) {
@@ -104,6 +101,8 @@ const xmlToJson = xml => {
   };
 })();
 
+
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 // 发送数据到后端的函数
 const makeFetchRequest = async (resultJson, year, make, model, type, engine, retryCount = 0) => {
   const postData = {
@@ -123,15 +122,14 @@ const makeFetchRequest = async (resultJson, year, make, model, type, engine, ret
       headers: {
         "Content-Type": "application/json",
       },
-      mode: 'cors',
       body: JSON.stringify(postData),
     });
 
     if (!response.ok) {
       if (response.status === 503) {
         if (retryCount < 5) {
-          const delayTime = Math.pow(2, retryCount) * 5000; // 指数回退
-          console.warn(`服务器返回 503，等待 ${delayTime / 5000} 秒后重试...`);
+          const delayTime = Math.pow(2, retryCount) * 1000; // 指数回退
+          console.warn(`服务器返回 503，等待 ${delayTime / 1000} 秒后重试...`);
           await delay(delayTime);
           return makeFetchRequest(resultJson, year, make, model, type, engine, retryCount + 1);
         } else {
@@ -146,10 +144,10 @@ const makeFetchRequest = async (resultJson, year, make, model, type, engine, ret
     console.log(`插入了 ${data.parts.length || 0} 条记录，返回数据:`, data);
     return data;
   } catch (error) {
-    console.error("提交数据到后端失败, 重新发送:", error);
+    console.error("提交数据到后端失败:", error);
     if (retryCount < 5) {
-      const delayTime = Math.pow(2, retryCount) * 3000; // 指数回退
-      console.warn(`遇到错误，等待 ${delayTime / 3000} 秒后重试...`);
+      const delayTime = Math.pow(2, retryCount) * 1000; // 指数回退
+      console.warn(`遇到错误，等待 ${delayTime / 1000} 秒后重试...`);
       await delay(delayTime);
       return makeFetchRequest(resultJson, year, make, model, type, engine, retryCount + 1);
     } else {
