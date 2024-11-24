@@ -1,7 +1,4 @@
 // the correct version that can located latest data from database, can then recusive automatic catch form latest. 
-// 延迟函数：用于控制异步等待
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
 const xmlToJson = xml => {
   let obj = {};
   if (xml.nodeType === 1) {
@@ -103,59 +100,59 @@ const xmlToJson = xml => {
     oldSend.call(this, data);
   };
 })();
-// 存储多个页面数据的队列
-let batchQueue = [];
 
-// 修改后的 makeFetchRequest 函数
-const makeFetchRequest = async (resultJson, year, make, model, type, engine) => {
-  // 将当前页面数据添加到队列
-  batchQueue.push({
+
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+// 发送数据到后端的函数
+const makeFetchRequest = async (resultJson, year, make, model, type, engine, retryCount = 0) => {
+  const postData = {
     resultJson,
     year,
     make,
     model,
     type,
     engine,
-  });
+  };
 
-  console.log(`当前队列长度: ${batchQueue.length}`);
-  console.log("缓存抓取的数据:", batchQueue);
+  console.log("准备发送以下数据到后端:", postData);
 
-  // 检查队列长度是否达到 5 个页面
-  if (batchQueue.length >= 5) {
-    // 合并 5 个页面的数据
-    const mergedParts = batchQueue.map((page) => page.resultJson);
-    const mergedData = {
-      resultJson: mergedParts, // 合并后的数据
-      year: batchQueue[0].year, // 取第一个页面的 year
-      make: batchQueue[0].make, // 取第一个页面的 make
-      model: batchQueue[0].model, // 取第一个页面的 model
-      type: batchQueue[0].type, // 取第一个页面的 type
-      engine: batchQueue[0].engine, // 取第一个页面的 engine
-    };
+  try {
+    const response = await fetch("http://3.18.104.4:8080/api/parts/add", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(postData),
+    });
 
-    try {
-      console.log("队列满，开始发送以下批量数据到后端:", mergedData);
-
-      const response = await fetch("http://3.18.104.4:8080/api/parts/add", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(mergedData),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
+    if (!response.ok) {
+      if (response.status === 503) {
+        if (retryCount < 5) {
+          const delayTime = Math.pow(2, retryCount) * 1000; // 指数回退
+          console.warn(`服务器返回 503，等待 ${delayTime / 1000} 秒后重试...`);
+          await delay(delayTime);
+          return makeFetchRequest(resultJson, year, make, model, type, engine, retryCount + 1);
+        } else {
+          console.error("达到最大重试次数，放弃请求");
+          return null;
+        }
       }
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
 
-      const data = await response.json();
-      console.log(`成功插入 ${mergedParts.length} 页的数据，共 ${data.parts.length || 0} 条记录。`);
-
-      // 清空队列
-      batchQueue = [];
-    } catch (error) {
-      console.error("批量提交数据到后端失败:", error);
+    const data = await response.json();
+    console.log(`插入了 ${data.parts.length || 0} 条记录，返回数据:`, data);
+    return data;
+  } catch (error) {
+    console.error("提交数据到后端失败:", error);
+    if (retryCount < 5) {
+      const delayTime = Math.pow(2, retryCount) * 1000; // 指数回退
+      console.warn(`遇到错误，等待 ${delayTime / 1000} 秒后重试...`);
+      await delay(delayTime);
+      return makeFetchRequest(resultJson, year, make, model, type, engine, retryCount + 1);
+    } else {
+      console.error("达到最大重试次数，放弃请求");
+      return null;
     }
   }
 };
