@@ -1,3 +1,5 @@
+console.error = function () {};
+
 const xmlToJson = xml => {
   let obj = {}
   if (xml.nodeType === 1) {
@@ -151,13 +153,19 @@ const makeFetchRequest = async (
     const data = await response.json()
     return data
   } catch (error) {
+
+    if (error.message.includes('503')) {
+      console.log('忽略 503 错误');
+      return;
+    }
+
     console.error('Fetch error:', error)
-    console.log(`Error occurred with parameters:
-      year: ${year},
-      make: ${make},
-      model: ${model},
-      type: ${type},
-      engine: ${engine}`)
+    // console.log(`Error occurred with parameters:
+    //   year: ${year},
+    //   make: ${make},
+    //   model: ${model},
+    //   type: ${type},
+    //   engine: ${engine}`)
     await makeFetchRequest(resultJson, year, make, model, type, engine)
   }
 }
@@ -331,7 +339,7 @@ const waitForNextList = (element, nextId) => {
       for (let mutation of mutations) {
         if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
           observer.disconnect()
-          setTimeout(resolve, 8000)
+          setTimeout(resolve, 4000)
           return
         }
       }
