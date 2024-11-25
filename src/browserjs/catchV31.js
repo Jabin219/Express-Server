@@ -1,5 +1,3 @@
-console.error = function () {};
-
 const xmlToJson = xml => {
   let obj = {}
   if (xml.nodeType === 1) {
@@ -149,87 +147,40 @@ const makeFetchRequest = async (
         type,
         engine
       })
-    })
-    const data = await response.json()
-    return data
-  } catch (error) {
+    });
 
-    if (error.message.includes('503')) {
-      console.log('忽略 503 错误');
-      return;
+    // 检查响应是否为空或格式无效
+    if (!response.ok) {
+      console.error(`Server returned status ${response.status}`);
+      throw new Error(`Server error: ${response.status}`);
     }
 
-    console.error('Fetch error:', error)
-    // console.log(`Error occurred with parameters:
-    //   year: ${year},
-    //   make: ${make},
-    //   model: ${model},
-    //   type: ${type},
-    //   engine: ${engine}`)
-    await makeFetchRequest(resultJson, year, make, model, type, engine)
+    const textResponse = await response.text();
+    if (!textResponse) {
+      throw new Error('Empty response from server');
+    }
+
+    let data;
+    try {
+      data = JSON.parse(textResponse); // 解析 JSON
+    } catch (e) {
+      console.error('Failed to parse JSON response:', textResponse);
+      throw new Error('Invalid JSON response');
+    }
+
+    return data;
+
+  } catch (error) {
+    console.error('Fetch error:', error);
+    console.log(`Error occurred with parameters:
+      year: ${year},
+      make: ${make},
+      model: ${model},
+      type: ${type},
+      engine: ${engine}`);
+    await makeFetchRequest(resultJson, year, make, model, type, engine); // 重试
   }
-}
-
-// 根据上次数据定位的函数
-const locateLastPosition = async (lastData) => {
-  console.log('定位到上次抓取的位置:', lastData);
-
-  const years = Array.from(document.querySelectorAll('#combo-1060-picker-listEl > *'));
-  const yearIndex = years.findIndex((year) => year.textContent.trim() === lastData.year);
-  if (yearIndex === -1) {
-    console.error(`未能找到年份: ${lastData.year}`);
-    return { success: false };
-  }
-  years[yearIndex].click();
-  console.log(`定位到年份: ${lastData.year}`);
-  await waitForNextList(years[yearIndex], 'combo-1061-picker-listEl');
-
-  const makes = Array.from(document.querySelectorAll('#combo-1061-picker-listEl > *'));
-  const makeIndex = makes.findIndex((make) => make.textContent.trim() === lastData.make);
-  if (makeIndex === -1) {
-    console.error(`未能找到品牌: ${lastData.make}`);
-    return { success: false };
-  }
-  makes[makeIndex].click();
-  console.log(`定位到品牌: ${lastData.make}`);
-  await waitForNextList(makes[makeIndex], 'combo-1062-picker-listEl');
-
-  const models = Array.from(document.querySelectorAll('#combo-1062-picker-listEl > *'));
-  const modelIndex = models.findIndex((model) => model.textContent.trim() === lastData.model);
-  if (modelIndex === -1) {
-    console.error(`未能找到车型: ${lastData.model}`);
-    return { success: false };
-  }
-  models[modelIndex].click();
-  console.log(`定位到车型: ${lastData.model}`);
-  await waitForNextList(models[modelIndex], 'combo-1063-picker-listEl');
-
-  const types = Array.from(document.querySelectorAll('#combo-1063-picker-listEl > *'));
-  const typeIndex = types.findIndex((type) => type.textContent.trim() === lastData.type);
-  if (typeIndex === -1) {
-    console.error(`未能找到部件类型: ${lastData.type}`);
-    return { success: false };
-  }
-  types[typeIndex].click();
-  console.log(`定位到部件类型: ${lastData.type}`);
-  await waitForNextList(types[typeIndex], 'combo-1064-picker-listEl');
-
-  const engines = Array.from(document.querySelectorAll('#combo-1064-picker-listEl > *'));
-  const engineIndex = engines.findIndex((engine) => engine.textContent.trim() === lastData.engine);
-
-  if (lastData.engine === 'All') {
-    console.log('发动机类型为 "All"，已由网页自动选择。');
-    return { success: true };
-  } else if (engineIndex !== -1) {
-    engines[engineIndex].click();
-    console.log(`定位到发动机: ${lastData.engine}`);
-    return { success: true };
-  }
-
-  console.error(`未能找到发动机: ${lastData.engine}`);
-  return { success: false };
 };
-
 const getEngines = async () => {
   const engines = document.getElementById('combo-1064-picker-listEl')?.children
   if (engines) {
@@ -314,7 +265,6 @@ const getMakes = async () => {
     }
   }
 }
-
 const catchData = async () => {
   const yearInput = document.getElementById('combo-1060-inputEl')
   const years = document.getElementById('combo-1060-picker-listEl').children
@@ -339,7 +289,7 @@ const waitForNextList = (element, nextId) => {
       for (let mutation of mutations) {
         if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
           observer.disconnect()
-          setTimeout(resolve, 4000)
+          setTimeout(resolve, 60000)
           return
         }
       }
@@ -355,6 +305,65 @@ const waitForNextList = (element, nextId) => {
   })
 }
 
+// 根据上次数据定位的函数
+const locateLastPosition = async (lastData) => {
+  console.log('定位到上次抓取的位置:', lastData);
+
+  const years = Array.from(document.querySelectorAll('#combo-1060-picker-listEl > *'));
+  const yearIndex = years.findIndex((year) => year.textContent.trim() === lastData.year);
+  if (yearIndex !== -1) {
+    years[yearIndex].click();
+    console.log(`定位到年份: ${lastData.year}`);
+    await waitForNextList(years[yearIndex], 'combo-1061-picker-listEl');
+  } else {
+    console.log(`未能找到年份: ${lastData.year}，已被自动定位成功，继续执行...`);
+  }
+
+  const makes = Array.from(document.querySelectorAll('#combo-1061-picker-listEl > *'));
+  const makeIndex = makes.findIndex((make) => make.textContent.trim() === lastData.make);
+  if (makeIndex !== -1) {
+    makes[makeIndex].click();
+    console.log(`定位到品牌: ${lastData.make}`);
+    await waitForNextList(makes[makeIndex], 'combo-1062-picker-listEl');
+  } else {
+    console.log(`未能找到品牌: ${lastData.make}，已被自动定位成功，继续执行...`);
+  }
+
+  const models = Array.from(document.querySelectorAll('#combo-1062-picker-listEl > *'));
+  const modelIndex = models.findIndex((model) => model.textContent.trim() === lastData.model);
+  if (modelIndex !== -1) {
+    models[modelIndex].click();
+    console.log(`定位到车型: ${lastData.model}`);
+    await waitForNextList(models[modelIndex], 'combo-1063-picker-listEl');
+  } else {
+    console.log(`未能找到车型: ${lastData.model}，已被自动定位成功，继续执行...`);
+  }
+
+  const types = Array.from(document.querySelectorAll('#combo-1063-picker-listEl > *'));
+  const typeIndex = types.findIndex((type) => type.textContent.trim() === lastData.type);
+  if (typeIndex !== -1) {
+    types[typeIndex].click();
+    console.log(`定位到部件类型: ${lastData.type}`);
+    await waitForNextList(types[typeIndex], 'combo-1064-picker-listEl');
+  } else {
+    console.log(`未能找到部件类型: ${lastData.type}，已被自动定位成功，继续执行...`);
+  }
+
+  const engines = Array.from(document.querySelectorAll('#combo-1064-picker-listEl > *'));
+  const engineIndex = engines.findIndex((engine) => engine.textContent.trim() === lastData.engine);
+
+  if (engineIndex !== -1) {
+    engines[engineIndex].click();
+    console.log(`定位到发动机: ${lastData.engine}`);
+    return { success: true };
+  } else {
+    console.log(`未能找到发动机: ${lastData.engine}，已被自动定位成功。`);
+    return { success: true }; // 默认返回成功
+  }
+};
+
+
+// 获取最新数据并启动抓取任务
 // 获取最新数据并启动抓取任务
 const fetchAndLocate = async () => {
   try {
@@ -365,19 +374,19 @@ const fetchAndLocate = async () => {
       if (lastData) {
         const locateResult = await locateLastPosition(lastData);
         if (locateResult.success) {
-          console.log('定位成功，从上次记录继续抓取...');
-          await catchData(); // 定位成功后继续抓取剩余数据
+          console.log('定位成功，等待5秒后继续抓取...');
+          await new Promise((resolve) => setTimeout(resolve, 5000)); // 等待30秒
           return;
         }
       }
     }
-    console.error('未能获取到最新记录或定位失败，重新从头开始抓取...');
-    await catchData(); // 若无法定位则从头开始抓取
+    console.error('未能获取到最新记录或定位失败');
   } catch (error) {
     console.error('获取最新数据时出错:', error);
-    await catchData(); // 若出错也从头开始抓取
   }
 };
 
 // 调用主任务逻辑
-fetchAndLocate();
+fetchAndLocate().then(() => {
+  catchData(); // 定位成功后继续抓取剩余数据
+});

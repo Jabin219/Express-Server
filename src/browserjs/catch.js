@@ -134,6 +134,7 @@ const makeFetchRequest = async (
   engine
 ) => {
   try {
+    // const response = await fetch('http://localhost:8081/api/parts/add', {
     const response = await fetch('http://3.18.104.4:8080/api/parts/add', {
       method: 'POST',
       headers: {
