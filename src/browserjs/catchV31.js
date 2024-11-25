@@ -289,7 +289,7 @@ const waitForNextList = (element, nextId) => {
       for (let mutation of mutations) {
         if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
           observer.disconnect()
-          setTimeout(resolve, 60000)
+          setTimeout(resolve, 40000)
           return
         }
       }
