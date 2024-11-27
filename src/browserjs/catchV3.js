@@ -363,11 +363,11 @@ const xmlToJson = xml => {
           }
         }
       }
-      console.error('未能获取到最新记录或定位失败，重新从头开始抓取...');
-      await catchData(); // 若无法定位则从头开始抓取
+      console.error('未能获取到最新记录或定位失败');
+      // await catchData(); // 若无法定位则从头开始抓取
     } catch (error) {
       console.error('获取最新数据时出错:', error);
-      await catchData(); // 若出错也从头开始抓取
+      // await catchData(); // 若出错也从头开始抓取
     }
   };
   
