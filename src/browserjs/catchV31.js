@@ -134,7 +134,7 @@ const makeFetchRequest = async (
   engine
 ) => {
   try {
-    const response = await fetch('http://47.92.4.101:8080/api/parts/add', {
+    const response = await fetch('http://47.92.144.20:8080/api/parts/add', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -350,7 +350,7 @@ const waitForNextList = (element, nextId) => {
 // 获取最新数据并启动抓取任务
 const fetchAndLocate = async () => {
   try {
-    const response = await fetch('http://47.92.4.101:8080/api/parts/latest');
+    const response = await fetch('http://47.92.144.20:8080/api/parts/latest');
     if (response.ok) {
       const data = await response.json();
       const lastData = data.latestParts?.[0];
