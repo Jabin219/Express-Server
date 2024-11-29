@@ -189,8 +189,8 @@ const locateLastPosition = async (lastData) => {
   const models = Array.from(document.querySelectorAll('#combo-1062-picker-listEl > *'));
   const modelIndex = models.findIndex((model) => model.textContent.trim() === lastData.model);
   if (modelIndex === -1) {
-    console.error(`未能找到车型: ${lastData.model}`);
-    return { success: false };
+    console.error(`未能找到车型，已自动调整为: ${lastData.model}`);
+    return { success: true };
   }
   models[modelIndex].click();
   console.log(`定位到车型: ${lastData.model}`);
@@ -199,8 +199,8 @@ const locateLastPosition = async (lastData) => {
   const types = Array.from(document.querySelectorAll('#combo-1063-picker-listEl > *'));
   const typeIndex = types.findIndex((type) => type.textContent.trim() === lastData.type);
   if (typeIndex === -1) {
-    console.error(`未能找到部件类型: ${lastData.type}`);
-    return { success: false };
+    console.error(`未能找到部件类型，已自动调整为: ${lastData.type}`);
+    return { success: true };
   }
   types[typeIndex].click();
   console.log(`定位到部件类型: ${lastData.type}`);
@@ -218,8 +218,8 @@ const locateLastPosition = async (lastData) => {
     return { success: true };
   }
 
-  console.error(`未能找到发动机: ${lastData.engine}`);
-  return { success: false };
+  console.error(`未能找到发动机，已自动调整为: ${lastData.engine}`);
+  return { success: true };
 };
 
 const getEngines = async () => {

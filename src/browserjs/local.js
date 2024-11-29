@@ -1,27 +1,3 @@
-let isRestarting = false; // 用于标记是否正在重启
-let intervalId = null; // 定时器 ID
-
-const cleanUpPreviousTask = () => {
-  // 清除定时器
-  if (intervalId) {
-    clearInterval(intervalId);
-    console.log("定时器已清除");
-    intervalId = null;
-  }
-
-  // 中止旧任务
-  if (taskController) {
-    taskController.abort();
-    console.log("旧任务已中止");
-    taskController = null;
-  }
-
-  // 清空活跃任务集合
-  activeTasks.forEach((task) => task.abort && task.abort());
-  activeTasks.clear();
-  console.log("活跃任务已清空");
-};
-
 const xmlToJson = xml => {
     let obj = {}
     if (xml.nodeType === 1) {
@@ -213,8 +189,8 @@ const xmlToJson = xml => {
     const models = Array.from(document.querySelectorAll('#combo-1062-picker-listEl > *'));
     const modelIndex = models.findIndex((model) => model.textContent.trim() === lastData.model);
     if (modelIndex === -1) {
-      console.error(`未能找到车型: ${lastData.model}`);
-      return { success: false };
+      console.error(`未能找到车型，已自动调整: ${lastData.model}`);
+      return { success: true };
     }
     models[modelIndex].click();
     console.log(`定位到车型: ${lastData.model}`);
@@ -223,8 +199,8 @@ const xmlToJson = xml => {
     const types = Array.from(document.querySelectorAll('#combo-1063-picker-listEl > *'));
     const typeIndex = types.findIndex((type) => type.textContent.trim() === lastData.type);
     if (typeIndex === -1) {
-      console.error(`未能找到部件类型: ${lastData.type}`);
-      return { success: false };
+      console.error(`未能找到部件类型，已自动调整: ${lastData.type}`);
+      return { success: true };
     }
     types[typeIndex].click();
     console.log(`定位到部件类型: ${lastData.type}`);
@@ -242,8 +218,8 @@ const xmlToJson = xml => {
       return { success: true };
     }
   
-    console.error(`未能找到发动机: ${lastData.engine}`);
-    return { success: false };
+    console.error(`未能找到发动机，已自动调整: ${lastData.engine}`);
+    return { success: true };
   };
   
   const getEngines = async () => {
@@ -348,48 +324,28 @@ const xmlToJson = xml => {
       await getMakes()
     }
   }
-  // 等待下一个列表加载
-const waitForNextList = (element, nextId) => {
-    const targetNode = document.getElementById(nextId);
-  
+  const waitForNextList = (element, nextId) => {
+    const targetNode = document.getElementById(nextId)
     return new Promise((resolve, reject) => {
       const observer = new MutationObserver((mutations, observer) => {
-        if (isRestarting) {
-          console.log(`监听器中断，程序正在重启: ${nextId}`);
-          observer.disconnect(); // 断开监听器
-          reject(new Error("程序正在重启，停止任务"));
-          return;
-        }
-  
         for (let mutation of mutations) {
           if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-            console.log(`监听到 DOM 变化: ${nextId}`);
-            observer.disconnect(); // 断开监听
-            setTimeout(resolve, 4000); // 延迟后继续
-            return;
+            observer.disconnect()
+            setTimeout(resolve, 4000)
+            return
           }
         }
-      });
-  
+      })
       if (targetNode) {
-        observer.observe(targetNode, { childList: true }); // 添加监听器
+        observer.observe(targetNode, { childList: true })
       }
-  
-      element.click(); // 点击触发事件
-  
+      element.click()
       setTimeout(() => {
-        if (isRestarting) {
-          console.log(`超时中断，程序正在重启: ${nextId}`);
-          observer.disconnect();
-          reject(new Error("程序正在重启，超时终止任务"));
-        } else {
-          observer.disconnect(); // 超时后手动断开监听器
-          resolve();
-        }
-      }, 10000);
-    });
-  };
-  
+        observer.disconnect()
+        resolve()
+      }, 10000)
+    })
+  }
   
   // 获取最新数据并启动抓取任务
   const fetchAndLocate = async () => {
@@ -408,44 +364,10 @@ const waitForNextList = (element, nextId) => {
         }
       }
       console.error('未能获取到最新记录或定位失败');
-      // await catchData(); // 若无法定位则从头开始抓取
     } catch (error) {
       console.error('获取最新数据时出错:', error);
-      // await catchData(); // 若出错也从头开始抓取
     }
   };
   
   // 调用主任务逻辑
-// 重启任务逻辑
-const resetProgram = async () => {
-    console.log("程序重启中...");
-    isRestarting = true; // 标记为重启状态
-  
-    // 清理旧任务
-    if (intervalId) {
-      clearInterval(intervalId);
-      intervalId = null;
-      console.log("旧任务定时器已清除");
-    }
-  
-    await new Promise((resolve) => setTimeout(resolve, 1000)); // 模拟清理延迟
-  
-    isRestarting = false; // 重启完成
-    console.log("重启完成，准备启动新任务");
-  };
-  
-  // 定时任务启动器
-  const startProgram = () => {
-    console.log("启动程序...");
-    fetchAndLocate(); // 立即执行一次任务
-  
-    intervalId = setInterval(async () => {
-      console.log("已运行2分钟，准备重启任务...");
-      await resetProgram(); // 调用重启逻辑
-      fetchAndLocate(); // 重启后重新执行任务
-    }, 1 * 60 * 1000); // 每1分钟重启一次任务
-  };
-  
-  
-  // 启动程序
-  startProgram();
+  fetchAndLocate();

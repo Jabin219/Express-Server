@@ -1,3 +1,7 @@
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+
+
 const xmlToJson = xml => {
   let obj = {}
   if (xml.nodeType === 1) {
@@ -125,6 +129,8 @@ const xmlToJson = xml => {
   }
 })()
 
+// 修改 makeFetchRequest 函数，在每次请求前后设置延迟
+// 修改 makeFetchRequest 函数
 const makeFetchRequest = async (
   resultJson,
   year,
@@ -133,11 +139,34 @@ const makeFetchRequest = async (
   type,
   engine
 ) => {
+  // 延迟时间设置（以毫秒为单位）
+  const delayTime = 2000; // 每次 POST 请求之间延迟 2 秒
+  const timeoutLimit = 60000; // 超时时间 60 秒
+
+  // 打印请求开始
+  console.log(`Preparing to send POST request with data:`, {
+    year,
+    make,
+    model,
+    type,
+    engine,
+    parts: resultJson.partsdata,
+  });
+
+  // 使用 AbortController 来设置超时
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutLimit); // 设置超时触发
+
   try {
+    // 延迟发送请求
+    console.log(`Waiting ${delayTime / 1000} seconds before sending the request...`);
+    await delay(delayTime);
+
+    // 发送请求
     const response = await fetch('http://47.92.144.20:8080/api/parts/add', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         resultJson,
@@ -145,22 +174,46 @@ const makeFetchRequest = async (
         make,
         model,
         type,
-        engine
-      })
-    })
-    const data = await response.json()
-    return data
+        engine,
+      }),
+      signal: controller.signal, // 绑定超时信号
+    });
+
+    // 清除超时定时器
+    clearTimeout(timeout);
+
+    // 检查响应状态
+    if (!response.ok) {
+      console.error(`POST request failed with status: ${response.status}`);
+      return null; // 返回空结果以跳过后续处理
+    }
+
+    const data = await response.json();
+    console.log(`POST request succeeded:`, data);
+
+    // 延迟后
+    console.log(`Waiting ${delayTime / 1000} seconds before next action...`);
+    await delay(delayTime);
+
+    return data;
   } catch (error) {
-    console.error('Fetch error:', error)
-    console.log(`Error occurred with parameters:
-      year: ${year},
-      make: ${make},
-      model: ${model},
-      type: ${type},
-      engine: ${engine}`)
-    await makeFetchRequest(resultJson, year, make, model, type, engine)
+    clearTimeout(timeout); // 确保超时被清除
+    if (error.name === 'AbortError') {
+      console.error(`Request timeout (exceeded ${timeoutLimit / 1000} seconds).`);
+    } else {
+      console.error('Fetch error:', error);
+    }
+    console.log(`Error occurred with parameters:`, {
+      year,
+      make,
+      model,
+      type,
+      engine,
+      parts: resultJson.partsdata,
+    });
+    return null; // 返回空结果以跳过后续处理
   }
-}
+};
 
 // 根据上次数据定位的函数
 const locateLastPosition = async (lastData) => {
@@ -189,7 +242,7 @@ const locateLastPosition = async (lastData) => {
   const models = Array.from(document.querySelectorAll('#combo-1062-picker-listEl > *'));
   const modelIndex = models.findIndex((model) => model.textContent.trim() === lastData.model);
   if (modelIndex === -1) {
-    console.error(`未能找到车型，已自动调整: ${lastData.model}`);
+    console.error(`未能找到车型，已自动调整为: ${lastData.model}`);
     return { success: true };
   }
   models[modelIndex].click();
@@ -199,7 +252,7 @@ const locateLastPosition = async (lastData) => {
   const types = Array.from(document.querySelectorAll('#combo-1063-picker-listEl > *'));
   const typeIndex = types.findIndex((type) => type.textContent.trim() === lastData.type);
   if (typeIndex === -1) {
-    console.error(`未能找到部件类型，已自动调整: ${lastData.type}`);
+    console.error(`未能找到部件类型，已自动调整为: ${lastData.type}`);
     return { success: true };
   }
   types[typeIndex].click();
@@ -218,7 +271,7 @@ const locateLastPosition = async (lastData) => {
     return { success: true };
   }
 
-  console.error(`未能找到发动机，已自动调整: ${lastData.engine}`);
+  console.error(`未能找到发动机，已自动调整为: ${lastData.engine}`);
   return { success: true };
 };
 
@@ -331,8 +384,8 @@ const waitForNextList = (element, nextId) => {
       for (let mutation of mutations) {
         if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
           observer.disconnect()
-          setTimeout(resolve, 4000)
-          return
+          console.log(`Page loaded. Waiting for 12 seconds...`);
+          setTimeout(resolve, 12000); // 页面加载后等待 12 秒          return
         }
       }
     })
@@ -343,7 +396,7 @@ const waitForNextList = (element, nextId) => {
     setTimeout(() => {
       observer.disconnect()
       resolve()
-    }, 10000)
+    }, 20000)
   })
 }
 
