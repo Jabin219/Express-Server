@@ -1,7 +1,6 @@
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 
-
 const xmlToJson = xml => {
   let obj = {}
   if (xml.nodeType === 1) {
@@ -374,6 +373,7 @@ const catchData = async () => {
   }
   for (let year of yearsArray) {
     await waitForNextList(year, 'combo-1061-picker-listEl')
+    
     await getMakes()
   }
 }

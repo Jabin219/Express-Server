@@ -1,183 +1,4 @@
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-// 添加全局变量来跟踪 POST 状态
-let isPostInProgress = false;
-
-// 修改 makeFetchRequest 函数
-const makeFetchRequest = async (
-  resultJson,
-  year,
-  make,
-  model,
-  type,
-  engine
-) => {
-  const delayTime = 2000; // 每次 POST 请求之间延迟 2 秒
-  const timeoutLimit = 20000; // 超时时间 20 秒
-  const maxRetries = 3; // 最大重试次数
-
-  console.log(`Preparing to send POST request with data:`, {
-    year,
-    make,
-    model,
-    type,
-    engine,
-    parts: resultJson.partsdata,
-  });
-
-  const controller = new AbortController();
-  let attempt = 0;
-  let success = false;
-
-  while (attempt < maxRetries && !success) {
-    attempt++;
-    console.log(`Attempt ${attempt}/${maxRetries}...`);
-
-    const timeout = setTimeout(() => controller.abort(), timeoutLimit);
-
-    try {
-      // 延迟发送请求
-      await delay(delayTime);
-
-      isPostInProgress = true; // 标记 POST 请求正在进行中
-
-      const response = await fetch("http://47.92.144.20:8080/api/parts/add", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          resultJson,
-          year,
-          make,
-          model,
-          type,
-          engine,
-        }),
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeout);
-
-      if (!response.ok) {
-        console.error(`POST request failed with status: ${response.status}`);
-        continue; // 重试
-      }
-
-      const data = await response.json();
-      console.log(`POST request succeeded:`, data);
-
-      // 等待下一步
-      console.log(`Waiting ${delayTime / 1000} seconds before next action...`);
-      await delay(delayTime);
-
-      success = true;
-      return data;
-    } catch (error) {
-      clearTimeout(timeout);
-      if (error.name === "AbortError") {
-        console.error(
-          `Request timeout (exceeded ${timeoutLimit / 1000} seconds).`
-        );
-      } else {
-        console.error("Fetch error:", error);
-      }
-    } finally {
-      isPostInProgress = false; // 重置状态
-    }
-  }
-
-  console.error(`POST request failed after ${maxRetries} attempts.`);
-  return null; // 返回 null 以标记失败
-};
-
-// 修改 waitForNextList 函数
-const waitForNextList = (element, nextId) => {
-  const targetNode = document.getElementById(nextId);
-
-  return new Promise((resolve, reject) => {
-    const observer = new MutationObserver((mutations, observer) => {
-      for (let mutation of mutations) {
-        if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
-          observer.disconnect();
-
-          const waitForPost = async () => {
-            while (isPostInProgress) {
-              console.log("Waiting for current POST request to finish...");
-              await delay(1000); // 每秒检查一次
-            }
-            console.log(`Page loaded. Waiting for 12 seconds...`);
-            setTimeout(resolve, 12000); // 页面加载后等待 12 秒
-          };
-
-          waitForPost();
-          return;
-        }
-      }
-    });
-
-    if (targetNode) {
-      observer.observe(targetNode, { childList: true });
-    }
-    element.click();
-
-    setTimeout(() => {
-      observer.disconnect();
-      resolve();
-    }, 20000);
-  });
-};
-
-// 修改 XMLHttpRequest.prototype.send
-(() => {
-  const oldOpen = XMLHttpRequest.prototype.open;
-  const oldSend = XMLHttpRequest.prototype.send;
-
-  XMLHttpRequest.prototype.open = function (method, url, async, user, pass) {
-    this._url = url;
-    oldOpen.call(this, method, url, async, user, pass);
-  };
-
-  XMLHttpRequest.prototype.send = function (data) {
-    var self = this;
-    const handleLoad = async () => {
-      if (self.status >= 200 && self.status < 300) {
-        window.lastResult = self.responseText;
-        const parser = new DOMParser();
-        const result = parser.parseFromString(window.lastResult, "text/xml");
-        const resultJson = xmlToJson(result.documentElement);
-
-        if (result.documentElement.tagName === "ShowMeThePartsDetail") {
-          let yearContent =
-            document.getElementById("combo-1060-inputEl").value.trim() || "";
-          let makeContent =
-            document.getElementById("combo-1061-inputEl").value.trim() ||
-            "unknown";
-          let modelContent =
-            document.getElementById("combo-1062-inputEl").value.trim() ||
-            "unknown";
-          let typeContent =
-            document.getElementById("combo-1063-inputEl").value.trim() ||
-            "unknown";
-          let engineContent =
-            document.getElementById("combo-1064-inputEl").value.trim() || "All";
-
-          await makeFetchRequest(
-            resultJson,
-            yearContent,
-            makeContent,
-            modelContent,
-            typeContent,
-            engineContent
-          );
-        }
-      }
-    };
-
-    this.addEventListener("load", handleLoad);
-    oldSend.call(this, data);
-  };
-})();
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 
 const xmlToJson = xml => {
@@ -309,6 +130,89 @@ const xmlToJson = xml => {
 
 // 修改 makeFetchRequest 函数，在每次请求前后设置延迟
 // 修改 makeFetchRequest 函数
+const makeFetchRequest = async (
+  resultJson,
+  year,
+  make,
+  model,
+  type,
+  engine
+) => {
+  // 延迟时间设置（以毫秒为单位）
+  const delayTime = 2000; // 每次 POST 请求之间延迟 2 秒
+  const timeoutLimit = 60000; // 超时时间 60 秒
+
+  // 打印请求开始
+  console.log(`Preparing to send POST request with data:`, {
+    year,
+    make,
+    model,
+    type,
+    engine,
+    parts: resultJson.partsdata,
+  });
+
+  // 使用 AbortController 来设置超时
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutLimit); // 设置超时触发
+
+  try {
+    // 延迟发送请求
+    console.log(`Waiting ${delayTime / 1000} seconds before sending the request...`);
+    await delay(delayTime);
+
+    // 发送请求
+    const response = await fetch('http://localhost:8081/api/parts/add', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        resultJson,
+        year,
+        make,
+        model,
+        type,
+        engine,
+      }),
+      signal: controller.signal, // 绑定超时信号
+    });
+
+    // 清除超时定时器
+    clearTimeout(timeout);
+
+    // 检查响应状态
+    if (!response.ok) {
+      console.error(`POST request failed with status: ${response.status}`);
+      return null; // 返回空结果以跳过后续处理
+    }
+
+    const data = await response.json();
+    console.log(`POST request succeeded:`, data);
+
+    // 延迟后
+    console.log(`Waiting ${delayTime / 1000} seconds before next action...`);
+    await delay(delayTime);
+
+    return data;
+  } catch (error) {
+    clearTimeout(timeout); // 确保超时被清除
+    if (error.name === 'AbortError') {
+      console.error(`Request timeout (exceeded ${timeoutLimit / 1000} seconds).`);
+    } else {
+      console.error('Fetch error:', error);
+    }
+    console.log(`Error occurred with parameters:`, {
+      year,
+      make,
+      model,
+      type,
+      engine,
+      parts: resultJson.partsdata,
+    });
+    return null; // 返回空结果以跳过后续处理
+  }
+};
 
 // 根据上次数据定位的函数
 const locateLastPosition = async (lastData) => {
@@ -455,29 +359,102 @@ const getMakes = async () => {
   }
 }
 
+
+
+
+
+
+
+let stopTask = false; // 全局停止标志
+let stopTimeoutId = null; // 全局超时定时器 ID
+
+// 设置全局停止标志的函数
+const setGlobalStopTimeout = (timeoutLimit = 3 * 60 * 1000) => {
+  stopTimeoutId = setTimeout(() => {
+    stopTask = true; // 设置停止标志
+    console.log("3 minutes elapsed. Stopping current task...");
+  }, timeoutLimit);
+};
+
+// 清理全局定时器
+const clearGlobalStopTimeout = () => {
+  if (stopTimeoutId) {
+    clearTimeout(stopTimeoutId);
+    stopTimeoutId = null;
+    console.log("Global stop timeout cleared.");
+  }
+};
+
+// 修改 catchData 方法以支持全局停止标志
 const catchData = async () => {
-  const yearInput = document.getElementById('combo-1060-inputEl')
-  const years = document.getElementById('combo-1060-picker-listEl').children
-  const yearsArray = Array.from(years)
+  const yearInput = document.getElementById('combo-1060-inputEl');
+  const years = document.getElementById('combo-1060-picker-listEl').children;
+  const yearsArray = Array.from(years);
+
   if (yearInput) {
     const yearIndex = yearsArray.findIndex(
-      year => year.textContent.trim() === yearInput.value.trim()
-    )
+      (year) => year.textContent.trim() === yearInput.value.trim()
+    );
     if (yearIndex !== -1) {
-      yearsArray.splice(0, yearIndex)
+      yearsArray.splice(0, yearIndex);
     }
   }
+
   for (let year of yearsArray) {
-    await waitForNextList(year, 'combo-1061-picker-listEl')
-    await getMakes()
+    if (stopTask) {
+      console.log("Task stopped due to global timeout.");
+      return; // 提前退出循环
+    }
+
+    console.log(`Processing year: ${year.textContent.trim()}`);
+    await waitForNextList(year, 'combo-1061-picker-listEl');
+    await getMakes();
   }
-}
 
+  console.log("catchData completed.");
+};
 
-// 获取最新数据并启动抓取任务
+// 修改 waitForNextList 方法以支持全局停止标志
+const waitForNextList = (element, nextId) => {
+  if (stopTask) return Promise.resolve(); // 提前返回，跳过等待
+
+  const targetNode = document.getElementById(nextId);
+  return new Promise((resolve) => {
+    const observer = new MutationObserver((mutations, observer) => {
+      if (stopTask) {
+        observer.disconnect();
+        resolve(); // 停止观察并返回
+        return;
+      }
+      for (let mutation of mutations) {
+        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+          observer.disconnect();
+          console.log(`Page loaded for ${element.textContent.trim()}. Waiting for 12 seconds...`);
+          setTimeout(resolve, 12000);
+          return;
+        }
+      }
+    });
+
+    if (targetNode) {
+      observer.observe(targetNode, { childList: true });
+    }
+
+    element.click();
+    setTimeout(() => {
+      observer.disconnect();
+      resolve();
+    }, 20000);
+  });
+};
+
+// 主任务逻辑：结合 locate 和 catchData
 const fetchAndLocate = async () => {
   try {
-    const response = await fetch('http://47.92.144.20:8080/api/parts/latest');
+    stopTask = false; // 重置停止标志
+    setGlobalStopTimeout(); // 设置 5 分钟超时
+
+    const response = await fetch('http://localhost:8081/api/parts/latest');
     if (response.ok) {
       const data = await response.json();
       const lastData = data.latestParts?.[0];
@@ -486,15 +463,19 @@ const fetchAndLocate = async () => {
         if (locateResult.success) {
           console.log('定位成功，从上次记录继续抓取...');
           await catchData(); // 定位成功后继续抓取剩余数据
-          return;
         }
       }
+    } else {
+      console.error('未能获取到最新记录或定位失败');
     }
-    console.error('未能获取到最新记录或定位失败');
   } catch (error) {
     console.error('获取最新数据时出错:', error);
+  } finally {
+    clearGlobalStopTimeout(); // 清理超时定时器
+    console.log("Restarting fetchAndLocate...");
+    setTimeout(fetchAndLocate, 1000); // 等待 1 秒后重新启动
   }
 };
 
-// 调用主任务逻辑
+// 启动主任务
 fetchAndLocate();
