@@ -219,7 +219,7 @@ const locateLastPosition = async (lastData) => {
   const years = Array.from(document.querySelectorAll('#combo-1060-picker-listEl > *'));
   const yearIndex = years.findIndex((year) => year.textContent.trim() === lastData.year);
   if (yearIndex === -1) {
-    console.error(`未能找到年份: ${lastData.year}`);
+    console.error(`网页报错，未能找到年份，请重新刷新页面: ${lastData.year}`);
     return { success: false };
   }
   years[yearIndex].click();
