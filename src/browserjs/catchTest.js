@@ -425,8 +425,8 @@ const waitForNextList = (element, nextId) => {
       for (let mutation of mutations) {
         if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
           observer.disconnect();
-          console.log(`Page loaded for ${element.textContent.trim()}. Waiting for 13 seconds...`);
-          setTimeout(resolve, 13000);
+          console.log(`Page loaded for ${element.textContent.trim()}. Waiting for 15 seconds...`);
+          setTimeout(resolve, 15000);
           return;
         }
       }
