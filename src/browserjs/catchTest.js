@@ -468,7 +468,7 @@ const fetchAndLocate = async () => {
     console.error('获取最新数据时出错:', error);
   } finally {
     clearGlobalStopTimeout(); // 清理超时定时器
-    console.log("Waiting 2 minutes before restarting...");
+    console.log("Waiting 3 minutes before restarting...");
     setTimeout(fetchAndLocate, restartDelay); // 两分钟后重新启动
   }
 };
