@@ -362,13 +362,13 @@ const getMakes = async () => {
 
 let stopTask = false; // 全局停止标志
 let stopTimeoutId = null; // 全局超时定时器 ID
-let restartDelay = 2 * 60 * 1000; // 停止后重启的延迟时间（两分钟）
+let restartDelay = 3 * 60 * 1000; // 停止后重启的延迟时间（3分钟）
 
 // 设置全局停止标志的函数
-const setGlobalStopTimeout = (timeoutLimit = 3 * 60 * 1000) => {
+const setGlobalStopTimeout = (timeoutLimit = 60 * 60 * 1000) => {
   stopTimeoutId = setTimeout(() => {
     stopTask = true; // 设置停止标志
-    console.log("3 minutes elapsed. Stopping current task...");
+    console.log("60 minutes elapsed. Stopping current task...");
   }, timeoutLimit);
 };
 
