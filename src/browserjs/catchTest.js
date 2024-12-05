@@ -162,7 +162,7 @@ const makeFetchRequest = async (
     await delay(delayTime);
 
     // 发送请求
-    const response = await fetch('http://localhost:8081/api/parts/add', {
+    const response = await fetch('http://47.92.144.20:8080/api/parts/add', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -454,7 +454,7 @@ const fetchAndLocate = async () => {
     stopTask = false; // 重置停止标志
     setGlobalStopTimeout(); // 设置 5 分钟超时
 
-    const response = await fetch('http://localhost:8081/api/parts/latest');
+    const response = await fetch('http://47.92.144.20:8080/api/parts/latest');
     if (response.ok) {
       const data = await response.json();
       const lastData = data.latestParts?.[0];
@@ -462,7 +462,7 @@ const fetchAndLocate = async () => {
         const locateResult = await locateLastPosition(lastData);
         if (locateResult.success) {
           console.log('定位成功，从上次记录继续抓取...');
-          await catchData(); // 定位成功后继续抓取剩余数据
+           catchData(); // 定位成功后继续抓取剩余数据
         }
       }
     } else {
