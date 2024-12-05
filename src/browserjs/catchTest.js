@@ -139,7 +139,7 @@ const makeFetchRequest = async (resultJson, year, make, model, type, engine) => 
 
   // 延迟时间设置（以毫秒为单位）
   const delayTime = 1000; // 每次 POST 请求之间延迟 1 秒
-  const timeoutLimit = 90000; // 超时时间 90 秒
+  const timeoutLimit = 60000; // 超时时间 60 秒
 
   console.log(`Preparing to send POST request with data:`, {
     year,
@@ -448,7 +448,7 @@ const waitForNextList = (element, nextId) => {
 const fetchAndLocate = async () => {
   try {
     stopTask = false; // 重置停止标志
-    setGlobalStopTimeout(); // 设置 3 分钟超时
+    setGlobalStopTimeout(); // 设置 N 分钟超时
 
     const response = await fetch('http://47.92.144.20:8080/api/parts/latest');
     if (response.ok) {
