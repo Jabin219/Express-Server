@@ -130,19 +130,17 @@ const xmlToJson = xml => {
 
 // 修改 makeFetchRequest 函数，在每次请求前后设置延迟
 // 修改 makeFetchRequest 函数
-const makeFetchRequest = async (
-  resultJson,
-  year,
-  make,
-  model,
-  type,
-  engine
-) => {
+const makeFetchRequest = async (resultJson, year, make, model, type, engine) => {
+  // 如果 type 是 unknown，直接跳过 POST 请求
+  if (type === 'unknown') {
+    console.log('Skipping POST request because type is "unknown".');
+    return null; // 返回 null 表示跳过了
+  }
+
   // 延迟时间设置（以毫秒为单位）
   const delayTime = 2000; // 每次 POST 请求之间延迟 2 秒
   const timeoutLimit = 60000; // 超时时间 60 秒
 
-  // 打印请求开始
   console.log(`Preparing to send POST request with data:`, {
     year,
     make,
@@ -362,11 +360,9 @@ const getMakes = async () => {
 
 
 
-
-
-
 let stopTask = false; // 全局停止标志
 let stopTimeoutId = null; // 全局超时定时器 ID
+let restartDelay = 2 * 60 * 1000; // 停止后重启的延迟时间（两分钟）
 
 // 设置全局停止标志的函数
 const setGlobalStopTimeout = (timeoutLimit = 3 * 60 * 1000) => {
@@ -452,7 +448,7 @@ const waitForNextList = (element, nextId) => {
 const fetchAndLocate = async () => {
   try {
     stopTask = false; // 重置停止标志
-    setGlobalStopTimeout(); // 设置 5 分钟超时
+    setGlobalStopTimeout(); // 设置 3 分钟超时
 
     const response = await fetch('http://47.92.144.20:8080/api/parts/latest');
     if (response.ok) {
@@ -462,7 +458,7 @@ const fetchAndLocate = async () => {
         const locateResult = await locateLastPosition(lastData);
         if (locateResult.success) {
           console.log('定位成功，从上次记录继续抓取...');
-           catchData(); // 定位成功后继续抓取剩余数据
+          await catchData(); // 定位成功后继续抓取剩余数据
         }
       }
     } else {
@@ -472,8 +468,8 @@ const fetchAndLocate = async () => {
     console.error('获取最新数据时出错:', error);
   } finally {
     clearGlobalStopTimeout(); // 清理超时定时器
-    console.log("Restarting fetchAndLocate...");
-    setTimeout(fetchAndLocate, 1000); // 等待 1 秒后重新启动
+    console.log("Waiting 2 minutes before restarting...");
+    setTimeout(fetchAndLocate, restartDelay); // 两分钟后重新启动
   }
 };
 
