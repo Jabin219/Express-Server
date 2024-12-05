@@ -132,14 +132,14 @@ const xmlToJson = xml => {
 // 修改 makeFetchRequest 函数
 const makeFetchRequest = async (resultJson, year, make, model, type, engine) => {
   // 如果 type 是 unknown，直接跳过 POST 请求
-  if (type === 'unknown') {
-    console.log('Skipping POST request because type is "unknown".');
-    return null; // 返回 null 表示跳过了
-  }
+  // if (type === 'unknown') {
+  //   console.log('Skipping POST request because type is "unknown".');
+  //   return null; // 返回 null 表示跳过了
+  // }
 
   // 延迟时间设置（以毫秒为单位）
-  const delayTime = 2000; // 每次 POST 请求之间延迟 2 秒
-  const timeoutLimit = 60000; // 超时时间 60 秒
+  const delayTime = 1000; // 每次 POST 请求之间延迟 1 秒
+  const timeoutLimit = 90000; // 超时时间 90 秒
 
   console.log(`Preparing to send POST request with data:`, {
     year,
@@ -365,10 +365,10 @@ let stopTimeoutId = null; // 全局超时定时器 ID
 let restartDelay = 3 * 60 * 1000; // 停止后重启的延迟时间（3分钟）
 
 // 设置全局停止标志的函数
-const setGlobalStopTimeout = (timeoutLimit = 60 * 60 * 1000) => {
+const setGlobalStopTimeout = (timeoutLimit = 30 * 60 * 1000) => {
   stopTimeoutId = setTimeout(() => {
     stopTask = true; // 设置停止标志
-    console.log("60 minutes elapsed. Stopping current task...");
+    console.log("30 minutes elapsed. Stopping current task...");
   }, timeoutLimit);
 };
 
@@ -425,8 +425,8 @@ const waitForNextList = (element, nextId) => {
       for (let mutation of mutations) {
         if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
           observer.disconnect();
-          console.log(`Page loaded for ${element.textContent.trim()}. Waiting for 12 seconds...`);
-          setTimeout(resolve, 12000);
+          console.log(`Page loaded for ${element.textContent.trim()}. Waiting for 13 seconds...`);
+          setTimeout(resolve, 13000);
           return;
         }
       }
@@ -440,7 +440,7 @@ const waitForNextList = (element, nextId) => {
     setTimeout(() => {
       observer.disconnect();
       resolve();
-    }, 20000);
+    }, 22000);
   });
 };
 
