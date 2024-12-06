@@ -279,7 +279,7 @@ const locateLastPosition = async (lastData) => {
 const getEngines = async () => {
 
   if (stopTask) {
-    console.log("Task stopped in getMakes.");
+    console.log("Task stopped in getEngines.");
     return; // 提前退出
   }
 
@@ -300,7 +300,7 @@ const getEngines = async () => {
 const getTypes = async () => {
 
   if (stopTask) {
-    console.log("Task stopped in getMakes.");
+    console.log("Task stopped in getTypes.");
     return; // 提前退出
   }
 
@@ -331,7 +331,7 @@ const getTypes = async () => {
 const getModels = async () => {
 
   if (stopTask) {
-    console.log("Task stopped in getMakes.");
+    console.log("Task stopped in getModels.");
     return; // 提前退出
   }
 
@@ -500,7 +500,7 @@ const fetchAndLocate = async () => {
     console.error('获取最新数据时出错:', error);
   } finally {
     clearGlobalStopTimeout(); // 清理超时定时器
-    console.log("Waiting 2 minutes before restarting...");
+    console.log("两分钟后重新启动...");
     setTimeout(fetchAndLocate, restartDelay); // 两分钟后重新启动
   }
 };
