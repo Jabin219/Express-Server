@@ -2,25 +2,7 @@ const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 let stopTask = false; // 全局停止标志
 let stopTimeoutId = null; // 全局超时定时器 ID
-let restartDelay = 1 * 60 * 1000; // 停止后重启的延迟时间（2分钟）
-
-
-// 设置全局停止标志的函数
-const setGlobalStopTimeout = (timeoutLimit = 3 * 60 * 1000) => {
-  stopTimeoutId = setTimeout(() => {
-    stopTask = true; // 设置停止标志
-    console.log("3 minutes elapsed. Stopping current task...");
-  }, timeoutLimit);
-};
-
-// 清理全局定时器
-const clearGlobalStopTimeout = () => {
-  if (stopTimeoutId) {
-    clearTimeout(stopTimeoutId);
-    stopTimeoutId = null;
-    console.log("Global stop timeout cleared.");
-  }
-};
+let restartDelay = 2 * 60 * 1000; // 停止后重启的延迟时间（2分钟）
 
 
 const xmlToJson = xml => {
@@ -243,57 +225,46 @@ const locateLastPosition = async (lastData) => {
     type: lastData.type,
     engine: lastData.engine,
   });
-
-  // 从年份开始
   const years = Array.from(document.querySelectorAll('#combo-1060-picker-listEl > *'));
   const yearIndex = years.findIndex((year) => year.textContent.trim() === lastData.year);
   if (yearIndex === -1) {
     console.error(`网页报错，未能找到年份，请重新刷新页面: ${lastData.year}`);
     return { success: false };
   }
-
-  // 强制重新选择年份并等待加载品牌列表
   years[yearIndex].click();
-  console.log(`重新定位到年份: ${lastData.year}`);
+  console.log(`定位到年份: ${lastData.year}`);
   await waitForNextList(years[yearIndex], 'combo-1061-picker-listEl');
 
-  // 强制重新选择品牌
   const makes = Array.from(document.querySelectorAll('#combo-1061-picker-listEl > *'));
   const makeIndex = makes.findIndex((make) => make.textContent.trim() === lastData.make);
   if (makeIndex === -1) {
     console.error(`未能找到品牌: ${lastData.make}`);
     return { success: false };
   }
-
   makes[makeIndex].click();
-  console.log(`重新定位到品牌: ${lastData.make}`);
+  console.log(`定位到品牌: ${lastData.make}`);
   await waitForNextList(makes[makeIndex], 'combo-1062-picker-listEl');
 
-  // 强制重新选择车型
   const models = Array.from(document.querySelectorAll('#combo-1062-picker-listEl > *'));
   const modelIndex = models.findIndex((model) => model.textContent.trim() === lastData.model);
   if (modelIndex === -1) {
-    console.error(`未能找到车型: ${lastData.model}`);
-    return { success: true }; // 如果未找到车型，仍可继续后续操作
+    console.error(`未能找到车型，已自动调整为: ${lastData.model}`);
+    return { success: true };
   }
-
   models[modelIndex].click();
-  console.log(`重新定位到车型: ${lastData.model}`);
+  console.log(`定位到车型: ${lastData.model}`);
   await waitForNextList(models[modelIndex], 'combo-1063-picker-listEl');
 
-  // 强制重新选择部件类型
   const types = Array.from(document.querySelectorAll('#combo-1063-picker-listEl > *'));
   const typeIndex = types.findIndex((type) => type.textContent.trim() === lastData.type);
   if (typeIndex === -1) {
-    console.error(`未能找到部件类型: ${lastData.type}`);
+    console.error(`未能找到部件类型，已自动调整为: ${lastData.type}`);
     return { success: true };
   }
-
   types[typeIndex].click();
-  console.log(`重新定位到部件类型: ${lastData.type}`);
+  console.log(`定位到部件类型: ${lastData.type}`);
   await waitForNextList(types[typeIndex], 'combo-1064-picker-listEl');
 
-  // 强制重新选择发动机
   const engines = Array.from(document.querySelectorAll('#combo-1064-picker-listEl > *'));
   const engineIndex = engines.findIndex((engine) => engine.textContent.trim() === lastData.engine);
 
@@ -302,14 +273,13 @@ const locateLastPosition = async (lastData) => {
     return { success: true };
   } else if (engineIndex !== -1) {
     engines[engineIndex].click();
-    console.log(`重新定位到发动机: ${lastData.engine}`);
+    console.log(`定位到发动机: ${lastData.engine}`);
     return { success: true };
   }
 
-  console.error(`未能找到发动机: ${lastData.engine}`);
+  console.error(`未能找到发动机，已自动调整为: ${lastData.engine}`);
   return { success: true };
 };
-
 
 const getEngines = async () => {
 
@@ -424,29 +394,26 @@ const getMakes = async () => {
 }
 
 
-// 清空所有下拉列表的辅助函数
-const clearAllDropdowns = () => {
-  const dropdownSelectors = [
-    '#combo-1060-picker-listEl', // 清空年份
-    '#combo-1061-picker-listEl', // 清空品牌
-    '#combo-1062-picker-listEl', // 清空车型
-    '#combo-1063-picker-listEl', // 清空部件类型
-    '#combo-1064-picker-listEl', // 清空发动机
-  ];
 
-  dropdownSelectors.forEach(selector => {
-    const listElement = document.querySelector(selector);
-    if (listElement) {
-      listElement.innerHTML = ''; // 清空下拉列表内容
-      console.log(`清空下拉列表: ${selector}`);
-    }
-  });
+
+
+
+// 设置全局停止标志的函数
+const setGlobalStopTimeout = (timeoutLimit = 30 * 60 * 1000) => {
+  stopTimeoutId = setTimeout(() => {
+    stopTask = true; // 设置停止标志
+    console.log("30 minutes elapsed. Stopping current task...");
+  }, timeoutLimit);
 };
 
-
-
-
-
+// 清理全局定时器
+const clearGlobalStopTimeout = () => {
+  if (stopTimeoutId) {
+    clearTimeout(stopTimeoutId);
+    stopTimeoutId = null;
+    console.log("Global stop timeout cleared.");
+  }
+};
 
 // 修改 catchData 方法以支持全局停止标志
 const catchData = async () => {
@@ -517,9 +484,6 @@ const fetchAndLocate = async () => {
     // stopTask = false; // 重置停止标志
     // setGlobalStopTimeout(); // 设置 N 分钟超时
 
-
-
-
     const response = await fetch('http://localhost:8081/api/parts/latest');
     if (response.ok) {
       const data = await response.json();
@@ -541,10 +505,8 @@ const fetchAndLocate = async () => {
     console.error('获取最新数据时出错:', error);
   } finally {
     clearGlobalStopTimeout(); // 清理超时定时器
-
-    clearDropdown();
-    console.log("1分钟后重新启动...");
-    setTimeout(fetchAndLocate, restartDelay); 
+    console.log("两分钟后重新启动...");
+    setTimeout(fetchAndLocate, restartDelay); // 两分钟后重新启动
   }
 };
 

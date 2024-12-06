@@ -136,10 +136,10 @@ const xmlToJson = xml => {
 // 修改 makeFetchRequest 函数
 const makeFetchRequest = async (resultJson, year, make, model, type, engine) => {
   // 如果 type 是 unknown，直接跳过 POST 请求
-  // if (type === 'unknown') {
-  //   console.log('Skipping POST request because type is "unknown".');
-  //   return null; // 返回 null 表示跳过了
-  // }
+  if (type === 'unknown') {
+    console.log('Skipping POST request because type is "unknown".');
+    return null; // 返回 null 表示跳过了
+  }
 
   // 延迟时间设置（以毫秒为单位）
   const delayTime = 1000; // 每次 POST 请求之间延迟 1 秒
