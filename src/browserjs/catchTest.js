@@ -399,10 +399,10 @@ const getMakes = async () => {
 
 
 // 设置全局停止标志的函数
-const setGlobalStopTimeout = (timeoutLimit = 5 * 60 * 1000) => {
+const setGlobalStopTimeout = (timeoutLimit = 30 * 60 * 1000) => {
   stopTimeoutId = setTimeout(() => {
     stopTask = true; // 设置停止标志
-    console.log("5 minutes elapsed. Stopping current task...");
+    console.log("30 minutes elapsed. Stopping current task...");
   }, timeoutLimit);
 };
 
