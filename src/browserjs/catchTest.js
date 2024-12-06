@@ -458,7 +458,7 @@ const fetchAndLocate = async () => {
         const locateResult = await locateLastPosition(lastData);
         if (locateResult.success) {
           console.log('定位成功，从上次记录继续抓取...');
-          await catchData(); // 定位成功后继续抓取剩余数据
+          catchData(); // 定位成功后继续抓取剩余数据
         }
       }
     } else {
