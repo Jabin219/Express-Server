@@ -362,13 +362,13 @@ const getMakes = async () => {
 
 let stopTask = false; // 全局停止标志
 let stopTimeoutId = null; // 全局超时定时器 ID
-let restartDelay = 3 * 60 * 1000; // 停止后重启的延迟时间（3分钟）
+let restartDelay = 2 * 60 * 1000; // 停止后重启的延迟时间（2分钟）
 
 // 设置全局停止标志的函数
-const setGlobalStopTimeout = (timeoutLimit = 30 * 60 * 1000) => {
+const setGlobalStopTimeout = (timeoutLimit = 6 * 60 * 1000) => {
   stopTimeoutId = setTimeout(() => {
     stopTask = true; // 设置停止标志
-    console.log("30 minutes elapsed. Stopping current task...");
+    console.log("6 minutes elapsed. Stopping current task...");
   }, timeoutLimit);
 };
 
@@ -458,7 +458,7 @@ const fetchAndLocate = async () => {
         const locateResult = await locateLastPosition(lastData);
         if (locateResult.success) {
           console.log('定位成功，从上次记录继续抓取...');
-          await catchData(); // 定位成功后继续抓取剩余数据
+           await catchData(); // 定位成功后继续抓取剩余数据
         }
       }
     } else {
