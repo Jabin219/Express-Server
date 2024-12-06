@@ -218,8 +218,13 @@ const makeFetchRequest = async (resultJson, year, make, model, type, engine) => 
 
 // 根据上次数据定位的函数
 const locateLastPosition = async (lastData) => {
-  console.log('定位到上次抓取的位置:', lastData);
-
+  console.log('获得上次抓取的位置:', {
+    year: lastData.year,
+    make: lastData.make,
+    model: lastData.model,
+    type: lastData.type,
+    engine: lastData.engine,
+  });
   const years = Array.from(document.querySelectorAll('#combo-1060-picker-listEl > *'));
   const yearIndex = years.findIndex((year) => year.textContent.trim() === lastData.year);
   if (yearIndex === -1) {
@@ -394,10 +399,10 @@ const getMakes = async () => {
 
 
 // 设置全局停止标志的函数
-const setGlobalStopTimeout = (timeoutLimit = 30 * 60 * 1000) => {
+const setGlobalStopTimeout = (timeoutLimit = 5 * 60 * 1000) => {
   stopTimeoutId = setTimeout(() => {
     stopTask = true; // 设置停止标志
-    console.log("30 minutes elapsed. Stopping current task...");
+    console.log("5 minutes elapsed. Stopping current task...");
   }, timeoutLimit);
 };
 

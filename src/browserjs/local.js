@@ -1,5 +1,9 @@
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+let stopTask = false; // 全局停止标志
+let stopTimeoutId = null; // 全局超时定时器 ID
+let restartDelay = 1 * 60 * 1000; // 停止后重启的延迟时间（2分钟）
+
 
 const xmlToJson = xml => {
   let obj = {}
@@ -216,46 +220,57 @@ const makeFetchRequest = async (resultJson, year, make, model, type, engine) => 
 const locateLastPosition = async (lastData) => {
   console.log('定位到上次抓取的位置:', lastData);
 
+  // 从年份开始
   const years = Array.from(document.querySelectorAll('#combo-1060-picker-listEl > *'));
   const yearIndex = years.findIndex((year) => year.textContent.trim() === lastData.year);
   if (yearIndex === -1) {
     console.error(`网页报错，未能找到年份，请重新刷新页面: ${lastData.year}`);
     return { success: false };
   }
+
+  // 点击年份并等待加载品牌列表
   years[yearIndex].click();
   console.log(`定位到年份: ${lastData.year}`);
   await waitForNextList(years[yearIndex], 'combo-1061-picker-listEl');
 
+
+  // 定位品牌
   const makes = Array.from(document.querySelectorAll('#combo-1061-picker-listEl > *'));
   const makeIndex = makes.findIndex((make) => make.textContent.trim() === lastData.make);
   if (makeIndex === -1) {
     console.error(`未能找到品牌: ${lastData.make}`);
     return { success: false };
   }
+
   makes[makeIndex].click();
   console.log(`定位到品牌: ${lastData.make}`);
   await waitForNextList(makes[makeIndex], 'combo-1062-picker-listEl');
 
+  // 定位车型
   const models = Array.from(document.querySelectorAll('#combo-1062-picker-listEl > *'));
   const modelIndex = models.findIndex((model) => model.textContent.trim() === lastData.model);
   if (modelIndex === -1) {
     console.error(`未能找到车型，已自动调整为: ${lastData.model}`);
-    return { success: true };
+    return { success: true }; // 继续执行后续操作
   }
+
   models[modelIndex].click();
   console.log(`定位到车型: ${lastData.model}`);
   await waitForNextList(models[modelIndex], 'combo-1063-picker-listEl');
 
+  // 定位部件类型
   const types = Array.from(document.querySelectorAll('#combo-1063-picker-listEl > *'));
   const typeIndex = types.findIndex((type) => type.textContent.trim() === lastData.type);
   if (typeIndex === -1) {
     console.error(`未能找到部件类型，已自动调整为: ${lastData.type}`);
     return { success: true };
   }
+
   types[typeIndex].click();
   console.log(`定位到部件类型: ${lastData.type}`);
   await waitForNextList(types[typeIndex], 'combo-1064-picker-listEl');
 
+  // 定位发动机
   const engines = Array.from(document.querySelectorAll('#combo-1064-picker-listEl > *'));
   const engineIndex = engines.findIndex((engine) => engine.textContent.trim() === lastData.engine);
 
@@ -273,6 +288,13 @@ const locateLastPosition = async (lastData) => {
 };
 
 const getEngines = async () => {
+
+  if (stopTask) {
+    console.log("Task stopped in getEngines.");
+    return; // 提前退出
+  }
+
+
   const engines = document.getElementById('combo-1064-picker-listEl')?.children
   if (engines) {
     const enginesArray = Array.from(engines)
@@ -287,6 +309,13 @@ const getEngines = async () => {
   }
 }
 const getTypes = async () => {
+
+  if (stopTask) {
+    console.log("Task stopped in getTypes.");
+    return; // 提前退出
+  }
+
+
   const typeInput = document.getElementById('combo-1063-inputEl')
   const types = document.getElementById('combo-1063-picker-listEl')?.children
   if (types) {
@@ -311,6 +340,13 @@ const getTypes = async () => {
 }
 
 const getModels = async () => {
+
+  if (stopTask) {
+    console.log("Task stopped in getModels.");
+    return; // 提前退出
+  }
+
+
   const modelInput = document.getElementById('combo-1062-inputEl')
   const models = document.getElementById('combo-1062-picker-listEl')?.children
   if (models) {
@@ -334,6 +370,12 @@ const getModels = async () => {
   }
 }
 const getMakes = async () => {
+
+  if (stopTask) {
+    console.log("Task stopped in getMakes.");
+    return; // 提前退出
+  }
+
   const makeInput = document.getElementById('combo-1061-inputEl')
   const makes = document.getElementById('combo-1061-picker-listEl')?.children
   if (makes) {
@@ -360,15 +402,13 @@ const getMakes = async () => {
 
 
 
-let stopTask = false; // 全局停止标志
-let stopTimeoutId = null; // 全局超时定时器 ID
-let restartDelay = 2 * 60 * 1000; // 停止后重启的延迟时间（2分钟）
+
 
 // 设置全局停止标志的函数
-const setGlobalStopTimeout = (timeoutLimit = 6 * 60 * 1000) => {
+const setGlobalStopTimeout = (timeoutLimit = 2 * 60 * 1000) => {
   stopTimeoutId = setTimeout(() => {
     stopTask = true; // 设置停止标志
-    console.log("6 minutes elapsed. Stopping current task...");
+    console.log("2 minutes elapsed. Stopping current task...");
   }, timeoutLimit);
 };
 
@@ -447,8 +487,8 @@ const waitForNextList = (element, nextId) => {
 // 主任务逻辑：结合 locate 和 catchData
 const fetchAndLocate = async () => {
   try {
-    stopTask = false; // 重置停止标志
-    setGlobalStopTimeout(); // 设置 N 分钟超时
+    // stopTask = false; // 重置停止标志
+    // setGlobalStopTimeout(); // 设置 N 分钟超时
 
     const response = await fetch('http://localhost:8081/api/parts/latest');
     if (response.ok) {
@@ -458,7 +498,10 @@ const fetchAndLocate = async () => {
         const locateResult = await locateLastPosition(lastData);
         if (locateResult.success) {
           console.log('定位成功，从上次记录继续抓取...');
-           await catchData(); // 定位成功后继续抓取剩余数据
+          //set
+          stopTask = false; // 重置停止标志
+          setGlobalStopTimeout(); // 设置 N 分钟超时
+          await catchData(); // 定位成功后继续抓取剩余数据
         }
       }
     } else {
@@ -468,7 +511,7 @@ const fetchAndLocate = async () => {
     console.error('获取最新数据时出错:', error);
   } finally {
     clearGlobalStopTimeout(); // 清理超时定时器
-    console.log("Waiting 3 minutes before restarting...");
+    console.log("1分钟后重新启动...");
     setTimeout(fetchAndLocate, restartDelay); // 两分钟后重新启动
   }
 };

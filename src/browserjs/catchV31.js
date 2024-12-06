@@ -1,5 +1,9 @@
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+let stopTask = false; // 全局停止标志
+let stopTimeoutId = null; // 全局超时定时器 ID
+let restartDelay = 2 * 60 * 1000; // 停止后重启的延迟时间（2分钟）
+
 
 const xmlToJson = xml => {
   let obj = {}
@@ -273,6 +277,13 @@ const locateLastPosition = async (lastData) => {
 };
 
 const getEngines = async () => {
+
+  if (stopTask) {
+    console.log("Task stopped in getEngines.");
+    return; // 提前退出
+  }
+
+
   const engines = document.getElementById('combo-1064-picker-listEl')?.children
   if (engines) {
     const enginesArray = Array.from(engines)
@@ -287,6 +298,13 @@ const getEngines = async () => {
   }
 }
 const getTypes = async () => {
+
+  if (stopTask) {
+    console.log("Task stopped in getTypes.");
+    return; // 提前退出
+  }
+
+
   const typeInput = document.getElementById('combo-1063-inputEl')
   const types = document.getElementById('combo-1063-picker-listEl')?.children
   if (types) {
@@ -311,6 +329,13 @@ const getTypes = async () => {
 }
 
 const getModels = async () => {
+
+  if (stopTask) {
+    console.log("Task stopped in getModels.");
+    return; // 提前退出
+  }
+
+
   const modelInput = document.getElementById('combo-1062-inputEl')
   const models = document.getElementById('combo-1062-picker-listEl')?.children
   if (models) {
@@ -334,6 +359,12 @@ const getModels = async () => {
   }
 }
 const getMakes = async () => {
+
+  if (stopTask) {
+    console.log("Task stopped in getMakes.");
+    return; // 提前退出
+  }
+
   const makeInput = document.getElementById('combo-1061-inputEl')
   const makes = document.getElementById('combo-1061-picker-listEl')?.children
   if (makes) {
@@ -360,9 +391,7 @@ const getMakes = async () => {
 
 
 
-let stopTask = false; // 全局停止标志
-let stopTimeoutId = null; // 全局超时定时器 ID
-let restartDelay = 3 * 60 * 1000; // 停止后重启的延迟时间（3分钟）
+
 
 // 设置全局停止标志的函数
 const setGlobalStopTimeout = (timeoutLimit = 30 * 60 * 1000) => {
@@ -447,8 +476,8 @@ const waitForNextList = (element, nextId) => {
 // 主任务逻辑：结合 locate 和 catchData
 const fetchAndLocate = async () => {
   try {
-    stopTask = false; // 重置停止标志
-    setGlobalStopTimeout(); // 设置 N 分钟超时
+    // stopTask = false; // 重置停止标志
+    // setGlobalStopTimeout(); // 设置 N 分钟超时
 
     const response = await fetch('http://47.92.144.20:8080/api/parts/latest');
     if (response.ok) {
@@ -458,6 +487,9 @@ const fetchAndLocate = async () => {
         const locateResult = await locateLastPosition(lastData);
         if (locateResult.success) {
           console.log('定位成功，从上次记录继续抓取...');
+          //set
+          stopTask = false; // 重置停止标志
+          setGlobalStopTimeout(); // 设置 N 分钟超时
           await catchData(); // 定位成功后继续抓取剩余数据
         }
       }
@@ -468,7 +500,7 @@ const fetchAndLocate = async () => {
     console.error('获取最新数据时出错:', error);
   } finally {
     clearGlobalStopTimeout(); // 清理超时定时器
-    console.log("Waiting 3 minutes before restarting...");
+    console.log("两分钟后重新启动...");
     setTimeout(fetchAndLocate, restartDelay); // 两分钟后重新启动
   }
 };
