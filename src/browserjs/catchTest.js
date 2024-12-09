@@ -503,7 +503,7 @@ const fetchAndLocate = async () => {
   } catch (error) {
     console.error('获取最新数据时出错:', error);
   } finally {
-    await delay(4 * 60 * 1000); // 等待5分钟
+    await delay(15 * 60 * 1000); // 等待15分钟
     clearGlobalStopTimeout(); // 清理超时定时器
     console.log("1分钟后重新启动...");
     setTimeout(fetchAndLocate, restartDelay); // 两分钟后重新启动
