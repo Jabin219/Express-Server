@@ -7,10 +7,10 @@ let stopTimeoutId = null; // 全局超时定时器 ID
 let restartDelay = 1 * 60 * 1000; // 停止后重启的延迟时间（1分钟）
 
 // 设置全局停止标志的函数
-const setGlobalStopTimeout = (timeoutLimit = 4 * 60 * 1000) => {
+const setGlobalStopTimeout = (timeoutLimit = 15 * 60 * 1000) => {
   stopTimeoutId = setTimeout(() => {
     stopTask = true; // 设置停止标志
-    console.log("4 minutes elapsed. Stopping current task...");
+    console.log("15 minutes elapsed. Stopping current task...");
   }, timeoutLimit);
 };
 
