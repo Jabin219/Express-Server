@@ -5,6 +5,8 @@ let stopTimeoutId = null; // 全局超时定时器 ID
 let restartDelay = 2 * 60 * 1000; // 停止后重启的延迟时间（2分钟）
 
 
+
+
 const xmlToJson = xml => {
   let obj = {}
   if (xml.nodeType === 1) {

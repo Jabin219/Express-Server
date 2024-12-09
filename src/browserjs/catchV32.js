@@ -434,37 +434,46 @@ const catchData = async () => {
 
 // 修改 waitForNextList 方法以支持全局停止标志
 const waitForNextList = (element, nextId) => {
-  if (stopTask) return Promise.resolve(); // 提前返回，跳过等待
-
-  const targetNode = document.getElementById(nextId);
-  return new Promise((resolve) => {
-    const observer = new MutationObserver((mutations, observer) => {
-      if (stopTask) {
-        observer.disconnect();
-        resolve(); // 停止观察并返回
+    if (stopTask) return Promise.resolve(); // 如果任务停止，提前返回
+  
+    const targetNode = document.getElementById(nextId);
+    return new Promise((resolve) => {
+      // 检查目标节点是否已经加载内容
+      if (targetNode && targetNode.children.length > 0) {
+        console.log(`目标节点 ${nextId} 已有内容，强制重新选择`);
+        element.click(); // 强制点击以触发重新加载
+        setTimeout(() => resolve(), 15000); // 模拟等待行为
         return;
       }
-      for (let mutation of mutations) {
-        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+  
+      // 动态观察逻辑（适用于内容未加载时）
+      const observer = new MutationObserver((mutations, observer) => {
+        if (stopTask) {
           observer.disconnect();
-          console.log(`Page loaded for ${element.textContent.trim()}. Waiting for 15 seconds...`);
-          setTimeout(resolve, 15000);
+          resolve(); // 停止观察并返回
           return;
         }
+        for (let mutation of mutations) {
+          if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+            observer.disconnect();
+            console.log(`Page loaded for ${element.textContent.trim()}. Waiting for 15 seconds...`);
+            setTimeout(resolve, 15000);
+            return;
+          }
+        }
+      });
+  
+      if (targetNode) {
+        observer.observe(targetNode, { childList: true });
       }
+  
+      element.click(); // 模拟点击以触发加载
+      setTimeout(() => {
+        observer.disconnect();
+        resolve();
+      }, 22000); // 超时保护
     });
-
-    if (targetNode) {
-      observer.observe(targetNode, { childList: true });
-    }
-
-    element.click();
-    setTimeout(() => {
-      observer.disconnect();
-      resolve();
-    }, 22000);
-  });
-};
+  };
 
 // 主任务逻辑：结合 locate 和 catchData
 const fetchAndLocate = async () => {

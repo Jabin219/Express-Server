@@ -1,5 +1,7 @@
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+let 
+
 
 
 let stopTask = false; // 全局停止标志
