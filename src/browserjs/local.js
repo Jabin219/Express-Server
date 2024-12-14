@@ -7,10 +7,10 @@ let stopTimeoutId = null; // 全局超时定时器 ID
 let restartDelay = 1 * 60 * 1000; // 停止后重启的延迟时间（1分钟）
 
 // 设置全局停止标志的函数
-const setGlobalStopTimeout = (timeoutLimit = 4 * 60 * 1000) => {
+const setGlobalStopTimeout = (timeoutLimit = 3 * 60 * 1000) => {
   stopTimeoutId = setTimeout(() => {
     stopTask = true; // 设置停止标志
-    console.log("4 minutes elapsed. Stopping current task...");
+    console.log("3 minutes elapsed. Stopping current task...");
   }, timeoutLimit);
 };
 
@@ -301,8 +301,8 @@ const locateLastPosition = async (lastData) => {
   
     const engineElement = await retryFindAndClick('#combo-1064-picker-listEl > *', lastData.engine);
     if (!engineElement) {
-      console.error(`未能找到发动机: ${lastData.engine}`);
-      return { success: false };
+      console.error(`(页面)未能找到发动机: ${lastData.engine}`);
+      return { success: true };
     }
   
     console.log(`定位到发动机: ${lastData.engine}`);
@@ -310,6 +310,11 @@ const locateLastPosition = async (lastData) => {
   };
 
 const getEngines = async () => {
+
+    if (stopTask) {
+        console.log("Task stopped before getting enginee.");
+        return; // 提前退出
+      }
 
 
   const engines = document.getElementById('combo-1064-picker-listEl')?.children
@@ -327,7 +332,10 @@ const getEngines = async () => {
 }
 const getTypes = async () => {
 
-
+    if (stopTask) {
+        console.log("Task stopped before getting type.");
+        return; // 提前退出
+      }
 
 
   const typeInput = document.getElementById('combo-1063-inputEl')
@@ -355,6 +363,11 @@ const getTypes = async () => {
 
 const getModels = async () => {
 
+    if (stopTask) {
+        console.log("Task stopped before getting model.");
+        return; // 提前退出
+      }
+
  
 
   const modelInput = document.getElementById('combo-1062-inputEl')
@@ -380,6 +393,12 @@ const getModels = async () => {
   }
 }
 const getMakes = async () => {
+
+     if (stopTask) {
+    console.log("Task stopped before getting makes.");
+    return; // 提前退出
+  }
+
 
   const makeInput = document.getElementById('combo-1061-inputEl')
   const makes = document.getElementById('combo-1061-picker-listEl')?.children
@@ -479,6 +498,60 @@ const waitForNextList = (element, nextId) => {
     });
   };
 
+
+  // //// order version of catch data
+  const previousCatchData = async () => {
+    const yearInput = document.getElementById('combo-1060-inputEl')
+    const years = document.getElementById('combo-1060-picker-listEl').children
+    const yearsArray = Array.from(years)
+    if (yearInput) {
+      const yearIndex = yearsArray.findIndex(
+        year => year.textContent.trim() === yearInput.value.trim()
+      )
+      if (yearIndex !== -1) {
+        yearsArray.splice(0, yearIndex)
+      }
+    }
+    for (let year of yearsArray) {
+
+      if (stopTask) {
+        console.log("Task stopped due to global timeout.");
+        return; // 提前退出循环
+      }
+
+      await previouswaitForNextList(year, 'combo-1061-picker-listEl')
+      await getMakes()
+    }
+  }
+
+  // // order version of waitForNextList data
+  const previouswaitForNextList = (element, nextId) => {
+
+    if (stopTask) return Promise.resolve(); // 如果任务停止，提前返回
+
+
+    const targetNode = document.getElementById(nextId)
+    return new Promise((resolve, reject) => {
+      const observer = new MutationObserver((mutations, observer) => {
+        for (let mutation of mutations) {
+          if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+            observer.disconnect()
+            setTimeout(resolve, 15000)
+            return
+          }
+        }
+      })
+      if (targetNode) {
+        observer.observe(targetNode, { childList: true })
+      }
+      element.click()
+      setTimeout(() => {
+        observer.disconnect()
+        resolve()
+      }, 20000)
+    })
+  }
+
 // 主任务逻辑：结合 locate 和 catchData
 const fetchAndLocate = async () => {
   try {
@@ -498,7 +571,7 @@ const fetchAndLocate = async () => {
           //set
           stopTask = false; // 重置停止标志
           setGlobalStopTimeout(); // 设置 N 分钟超时
-          catchData(); // 定位成功后继续抓取剩余数据
+          await previousCatchData(); // 定位成功后继续抓取剩余数据
         }
       }
     } else {
@@ -507,7 +580,6 @@ const fetchAndLocate = async () => {
   } catch (error) {
     console.error('获取最新数据时出错:', error);
   } finally {
-    await delay(4 * 60 * 1000); // 等待4分钟
     clearGlobalStopTimeout(); // 清理超时定时器
     console.log("1分钟后重新启动...");
     setTimeout(fetchAndLocate, restartDelay); // 两分钟后重新启动
