@@ -525,8 +525,7 @@ const waitForNextList = (element, nextId) => {
             const locateResult = await locateLastPosition(lastData);
             if (locateResult.success) {
               console.log("Successfully located. Starting data fetching...");
-              await 
-              (); // 调用抓取任务
+              await catchData(); // 调用抓取任务
             } else {
               console.error("Failed to locate last position.");
             }
@@ -550,6 +549,5 @@ const waitForNextList = (element, nextId) => {
       clearGlobalStopTimeout(); // 确保计时器清理
     }
   };
-
 // 启动主任务
 fetchAndLocate();
