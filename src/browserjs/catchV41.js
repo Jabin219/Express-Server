@@ -499,7 +499,6 @@ const waitForNextList = (element, nextId) => {
       }, 22000); // 超时保护
     });
   };
-
   const fetchAndLocate = async () => {
     try {
       const startTime = Date.now();
@@ -515,7 +514,30 @@ const waitForNextList = (element, nextId) => {
   
         console.log("Starting a new 30-minute session...");
         setGlobalStopTimeout(); // 设置 30 分钟计时器
-        await locateAndFetch(); // 调用定位和抓取的综合方法
+  
+        // 每次开始任务前调用 locateLastPosition 重新定位
+        const response = await fetch('http://47.92.144.20:8080/api/parts/latest');
+        if (response.ok) {
+          const data = await response.json();
+          const lastData = data.latestParts?.[0];
+          if (lastData) {
+            console.log("Locating last position...");
+            const locateResult = await locateLastPosition(lastData);
+            if (locateResult.success) {
+              console.log("Successfully located. Starting data fetching...");
+              await 
+              (); // 调用抓取任务
+            } else {
+              console.error("Failed to locate last position.");
+            }
+          } else {
+            console.log("No previous data found. Starting fresh.");
+            await catchData();
+          }
+        } else {
+          console.error("Failed to fetch latest data. Skipping this session.");
+        }
+  
         clearGlobalStopTimeout(); // 清理计时器
       }
   
