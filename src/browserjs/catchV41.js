@@ -2,14 +2,16 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 let stopTask = false; // 全局停止标志
 let stopTimeoutId = null; // 全局超时定时器 ID
-const runtimeLimit = 4 * 60 * 60 * 1000; // 4 小时运行时间
-const restTime = 12 * 60 * 60 * 1000; // 12 小时休息时间
+const runtimeLimit = 4 * 60 * 60 * 1000; // 每天运行 4 小时
+const restTime = 12 * 60 * 60 * 1000; // 每天休息 12 小时
+const sessionLimit = 30 * 60 * 1000; // 每 30 分钟休息 1 分钟
+const shortRestTime = 60 * 1000; // 短休息 1 分钟
 
 // 设置全局停止标志的函数
-const setGlobalStopTimeout = (timeoutLimit = 30 * 60 * 1000) => {
+const setGlobalStopTimeout = (timeoutLimit = sessionLimit) => {
   stopTimeoutId = setTimeout(() => {
     stopTask = true; // 设置停止标志
-    console.log("30 minutes elapsed. Stopping current task...");
+    console.log("30 minutes elapsed. Taking a short break...");
   }, timeoutLimit);
 };
 
@@ -499,32 +501,33 @@ const waitForNextList = (element, nextId) => {
 // 主任务逻辑：结合 locate 和 catchData
 // 运行主要任务的函数
 const fetchAndLocate = async () => {
-    try {
-      const startTime = Date.now();
-      console.log("Task started and will run for 4 hours...");
-  
-      while (Date.now() - startTime < runtimeLimit) {
-        if (stopTask) {
-          console.log("Task stopped manually or by timeout.");
-          break;
-        }
-  
-        console.log("Running task...");
-        setGlobalStopTimeout(); // 每次运行任务设置30分钟超时
-        await catchData(); // 执行抓取任务
-        clearGlobalStopTimeout(); // 清理超时
+  try {
+    const startTime = Date.now();
+    console.log("Task started. Will run for 4 hours...");
+
+    while (Date.now() - startTime < runtimeLimit) {
+      if (stopTask) {
+        console.log("Task paused for a short break...");
+        stopTask = false; // 重置停止标志
+        await delay(shortRestTime); // 短休息 1 分钟
+        continue; // 返回循环继续任务
       }
-  
-      console.log("Task completed 4 hours. Resting for 12 hours...");
-      await delay(restTime); // 休息 12 小时
-      stopTask = false; // 重置停止标志
-      fetchAndLocate(); // 再次启动任务
-    } catch (error) {
-      console.error("Error during task execution:", error);
-    } finally {
-      clearGlobalStopTimeout(); // 确保超时被清理
+
+      console.log("Starting a new 30-minute session...");
+      setGlobalStopTimeout(); // 设置 30 分钟超时
+      await catchData(); // 执行抓取任务
+      clearGlobalStopTimeout(); // 清理超时
     }
-  };
+
+    console.log("4 hours completed. Resting for 12 hours...");
+    await delay(restTime); // 长休息 12 小时
+    fetchAndLocate(); // 重新启动任务
+  } catch (error) {
+    console.error("Error during task execution:", error);
+  } finally {
+    clearGlobalStopTimeout(); // 确保超时清理
+  }
+};
 
 // 启动主任务
 fetchAndLocate();
