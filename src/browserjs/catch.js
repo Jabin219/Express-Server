@@ -134,8 +134,8 @@ const makeFetchRequest = async (
   engine
 ) => {
   try {
-    const response = await fetch('http://localhost:8081/api/parts/add', {
-    // const response = await fetch('http://47.92.144.20:8080/api/parts/add', {
+    // const response = await fetch('http://localhost:8081/api/parts/add', {
+    const response = await fetch('http://3.18.104.4:8080/api/parts/add', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -246,54 +246,23 @@ const getMakes = async () => {
     }
   }
 }
-// const catchData = async () => {
-//   const yearInput = document.getElementById('combo-1060-inputEl')
-//   const years = document.getElementById('combo-1060-picker-listEl').children
-//   const yearsArray = Array.from(years)
-//   if (yearInput) {
-//     const yearIndex = yearsArray.findIndex(
-//       year => year.textContent.trim() === yearInput.value.trim()
-//     )
-//     if (yearIndex !== -1) {
-//       yearsArray.splice(0, yearIndex)
-//     }
-//   }
-//   for (let year of yearsArray) {
-//     await waitForNextList(year, 'combo-1061-picker-listEl')
-//     await getMakes()
-//   }
-// }
-
 const catchData = async () => {
-  const startTime = Date.now(); // 记录开始时间
-  const timeoutLimit = 1 * 60 * 1000; // 设置超时时间为 1 分钟
-
-  const yearInput = document.getElementById('combo-1060-inputEl');
-  const years = document.getElementById('combo-1060-picker-listEl').children;
-  const yearsArray = Array.from(years);
-
+  const yearInput = document.getElementById('combo-1060-inputEl')
+  const years = document.getElementById('combo-1060-picker-listEl').children
+  const yearsArray = Array.from(years)
   if (yearInput) {
     const yearIndex = yearsArray.findIndex(
-      (year) => year.textContent.trim() === yearInput.value.trim()
-    );
+      year => year.textContent.trim() === yearInput.value.trim()
+    )
     if (yearIndex !== -1) {
-      yearsArray.splice(0, yearIndex);
+      yearsArray.splice(0, yearIndex)
     }
   }
-
   for (let year of yearsArray) {
-    // 检查是否超过 5 分钟
-    if (Date.now() - startTime >= timeoutLimit) {
-      console.log('Timeout reached. Stopping data fetch...');
-      break; // 跳出循环，停止抓取任务
-    }
-
-    await waitForNextList(year, 'combo-1061-picker-listEl');
-    await getMakes();
+    await waitForNextList(year, 'combo-1061-picker-listEl')
+    await getMakes()
   }
-
-  console.log('catchData finished or timed out.');
-};
+}
 const waitForNextList = (element, nextId) => {
   const targetNode = document.getElementById(nextId)
   return new Promise((resolve, reject) => {

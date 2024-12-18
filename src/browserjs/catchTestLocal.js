@@ -1,13 +1,17 @@
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 let stopTask = false; // 全局停止标志
 let stopTimeoutId = null; // 全局超时定时器 ID
+const runtimeLimit = 4 * 60 * 60 * 1000; // 每天运行 4 小时
+const restTime = 12 * 60 * 60 * 1000; // 每天休息 12 小时
+const sessionLimit = 30 * 60 * 1000; // 每 30 分钟短任务
+const shortRestTime = 5 * 60 * 1000; // 每 30 分钟后的短休息 5 分钟
 
 // 设置全局停止标志的函数
-const setGlobalStopTimeout = (timeoutLimit = 30 * 60 * 1000) => {
+const setGlobalStopTimeout = (timeoutLimit = sessionLimit) => {
   stopTimeoutId = setTimeout(() => {
     stopTask = true; // 设置停止标志
-    console.log("30 minutes elapsed. Stopping current task...");
+    console.log("30 minutes elapsed. Pausing for 5 minutes...");
   }, timeoutLimit);
 };
 
@@ -19,6 +23,8 @@ const clearGlobalStopTimeout = () => {
     console.log("Global stop timeout cleared.");
   }
 };
+
+
 
 const xmlToJson = xml => {
   let obj = {}
@@ -179,8 +185,8 @@ const makeFetchRequest = async (resultJson, year, make, model, type, engine) => 
     await delay(delayTime);
 
     // 发送请求
-    const response = await fetch('http://47.92.144.20:8080/api/parts/add', {
-      // const response = await fetch('http://localhost:8081/api/parts/add', {
+    // const response = await fetch('http://47.92.144.20:8080/api/parts/add', {
+      const response = await fetch('http://localhost:8081/api/parts/add', {
 
       method: 'POST',
       headers: {
@@ -493,39 +499,56 @@ const waitForNextList = (element, nextId) => {
       }, 22000); // 超时保护
     });
   };
-
-// 主任务逻辑：结合 locate 和 catchData
-
-// 修改后的主任务逻辑
-const fetchAndLocate = async () => {
-  try {
-    console.log("Fetching and locating task started...");
-    stopTask = false; // 重置停止标志
-    setGlobalStopTimeout(); // 设置 30 分钟超时
-
-    const response = await fetch('http://47.92.144.20:8080/api/parts/latest');
-    // const response = await fetch('http://localhost:8081/api/parts/latest');
-
-    if (response.ok) {
-      const data = await response.json();
-      const lastData = data.latestParts?.[0];
-      if (lastData) {
-        const locateResult = await locateLastPosition(lastData);
-        if (locateResult.success) {
-          console.log('定位成功，从上次记录继续抓取...');
-          await catchData(); // 定位成功后继续抓取剩余数据
+  const fetchAndLocate = async () => {
+    try {
+      const startTime = Date.now();
+      console.log("Task started. Will run for 4 hours...");
+  
+      while (Date.now() - startTime < runtimeLimit) {
+        if (stopTask) {
+          console.log("Taking a 5-minute break...");
+          stopTask = false; // 重置停止标志
+          await delay(shortRestTime); // 短休息 5 分钟
+          continue; // 返回循环继续任务
         }
+  
+        console.log("Starting a new 30-minute session...");
+        setGlobalStopTimeout(); // 设置 30 分钟计时器
+  
+        // 每次开始任务前调用 locateLastPosition 重新定位
+        // const response = await fetch('http://47.92.144.20:8080/api/parts/latest');
+        const response = await fetch('http://localhost:8081/api/parts/latest');
+        if (response.ok) {
+          const data = await response.json();
+          const lastData = data.latestParts?.[0];
+          if (lastData) {
+            console.log("Locating last position...");
+            const locateResult = await locateLastPosition(lastData);
+            if (locateResult.success) {
+              console.log("Successfully located. Starting data fetching...");
+              await catchData(); // 调用抓取任务
+            } else {
+              console.error("Failed to locate last position.");
+            }
+          } else {
+            console.log("No previous data found. Starting fresh.");
+            await catchData();
+          }
+        } else {
+          console.error("Failed to fetch latest data. Skipping this session.");
+        }
+  
+        clearGlobalStopTimeout(); // 清理计时器
       }
-    } else {
-      console.error('未能获取到最新记录或定位失败');
+  
+      console.log("4 hours completed. Resting for 12 hours...");
+      await delay(restTime); // 长休息 12 小时
+      fetchAndLocate(); // 重新启动任务
+    } catch (error) {
+      console.error("Error during task execution:", error);
+    } finally {
+      clearGlobalStopTimeout(); // 确保计时器清理
     }
-  } catch (error) {
-    console.error('获取最新数据时出错:', error);
-  } finally {
-    clearGlobalStopTimeout(); // 清理超时定时器
-    console.log("Task stopped completely. No restart.");
-  }
-};
-
+  };
 // 启动主任务
 fetchAndLocate();
