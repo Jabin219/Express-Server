@@ -4,14 +4,14 @@ let stopTask = false; // 全局停止标志
 let stopTimeoutId = null; // 全局超时定时器 ID
 const runtimeLimit = 4 * 60 * 60 * 1000; // 每天运行 4 小时
 const restTime = 12 * 60 * 60 * 1000; // 每天休息 12 小时
-const sessionLimit = 30 * 60 * 1000; // 每 30 分钟短任务
-const shortRestTime = 5 * 60 * 1000; // 每 30 分钟后的短休息 5 分钟
+const sessionLimit = 3 * 60 * 1000; // 每 30 分钟短任务
+const shortRestTime = 1 * 60 * 1000; // 每 30 分钟后的短休息 5 分钟
 
 // 设置全局停止标志的函数
 const setGlobalStopTimeout = (timeoutLimit = sessionLimit) => {
   stopTimeoutId = setTimeout(() => {
     stopTask = true; // 设置停止标志
-    console.log("30 minutes elapsed. Pausing for 5 minutes...");
+    console.log("3 minutes elapsed. Pausing for 5 minutes...");
   }, timeoutLimit);
 };
 
@@ -506,7 +506,7 @@ const waitForNextList = (element, nextId) => {
   
       while (Date.now() - startTime < runtimeLimit) {
         if (stopTask) {
-          console.log("Taking a 5-minute break...");
+          console.log("Taking a 1-minute break...");
           stopTask = false; // 重置停止标志
           await delay(shortRestTime); // 短休息 5 分钟
           continue; // 返回循环继续任务
