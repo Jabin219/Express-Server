@@ -515,8 +515,6 @@ const waitForNextList = (element, nextId) => {
       while (Date.now() - startTime < runtimeLimit) {
         if (stopTask) {
         console.log(`休息 ${shortRestTime / (60 * 1000)} 分钟...`);
-
-          console.log("Taking a 5-minute break...");
           stopTask = false; // 重置停止标志
           await delay(shortRestTime); // 短休息 5 分钟
           continue; // 返回循环继续任务
