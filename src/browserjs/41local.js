@@ -4,15 +4,14 @@ let stopTask = false; // 全局停止标志
 let stopTimeoutId = null; // 全局超时定时器 ID
 const runtimeLimit = 4 * 60 * 60 * 1000; // 每天运行 4 小时
 const restTime = 12 * 60 * 60 * 1000; // 每天休息 12 小时
-const sessionLimit = 10 * 60 * 1000; // 每 30 分钟短任务
-const shortRestTime = 1 * 60 * 1000; // 每 30 分钟后的短休息 5 分钟
-let fetchAndLocateCounter = 0; // 全局计数器
+const sessionLimit = 30 * 60 * 1000; // 每 30 分钟短任务
+const shortRestTime = 5 * 60 * 1000; // 每 30 分钟后的短休息 5 分钟
 
 // 设置全局停止标志的函数
 const setGlobalStopTimeout = (timeoutLimit = sessionLimit) => {
   stopTimeoutId = setTimeout(() => {
     stopTask = true; // 设置停止标志
-    console.log("10 minutes elapsed. Pausing for 5 minutes...");
+    console.log("30 minutes elapsed. Pausing for 5 minutes...");
   }, timeoutLimit);
 };
 
@@ -243,13 +242,6 @@ const makeFetchRequest = async (resultJson, year, make, model, type, engine) => 
 // 根据上次数据定位的函数
 // 根据上次数据定位的函数
 const locateLastPosition = async (lastData) => {
-
-    if (stopTask) {
-        console.log("任务被手动终止，停止定位！");
-        return { success: false };
-      }
-
-      
     console.log('获得上次抓取的位置:', {
       year: lastData.year,
       make: lastData.make,
@@ -288,6 +280,7 @@ const locateLastPosition = async (lastData) => {
         console.error(`多次尝试后仍未找到目标元素: ${value}`);
         return null;
       };
+  
     // 定位年份
     const yearElement = await retryFindAndClick('#combo-1060-picker-listEl > *', lastData.year);
     if (!yearElement) return { success: false };
@@ -308,31 +301,20 @@ const locateLastPosition = async (lastData) => {
     if (!typeElement) return { success: false };
     await waitForNextList(typeElement, 'combo-1064-picker-listEl');
   
+    // 定位发动机
+    // if (lastData.engine === 'All') {
+    //   console.log('发动机类型为 "All"，已由网页自动选择。');
+    //   return { success: true };
+    // }
+  
     const engineElement = await retryFindAndClick('#combo-1064-picker-listEl > *', lastData.engine);
-
     if (!engineElement) {
-      console.error(`(页面)未能找到发动机: ${lastData.engine}，尝试加载列表中的其他选项...`);
-    
-      const engines = Array.from(document.querySelectorAll('#combo-1064-picker-listEl > *'));
-    
-      if (engines.length > 0) {
-        console.log(`列表中找到的发动机选项: ${engines.map(el => el.textContent.trim()).join(', ')}`);
-    
-        for (let engine of engines) {
-          console.log(`尝试选择发动机选项: ${engine.textContent.trim()}`);
-          engine.click();
-          await delay(2000); // 确保选项加载成功
-          return { success: true }; // 成功加载某个选项后直接返回成功
-        }
-      } else {
-        console.error("列表中没有找到任何发动机选项，尝试跳过。");
-        return { success: true }; // 如果列表中完全没有元素，才返回失败
-      }
+      console.error(`(页面)未能找到发动机: ${lastData.engine}`);
+      return { success: true };
     }
-
-    console.log("定位成功！");
-    return { success: true }; // 定位成功后返回 success: true
-
+  
+    console.log(`定位到发动机: ${lastData.engine}`);
+    return { success: true };
   };
 
 const getEngines = async () => {
@@ -482,125 +464,55 @@ const catchData = async () => {
 };
 
 // 修改 waitForNextList 方法以支持全局停止标志
-const waitForNextList = async (element, nextId) => {
-
+const waitForNextList = (element, nextId) => {
     if (stopTask) return Promise.resolve(); // 如果任务停止，提前返回
-
+  
     const targetNode = document.getElementById(nextId);
-  
     return new Promise((resolve) => {
-      // 强制点击当前元素，确保列表重新加载
-      console.log(`点击父元素重新加载: ${element.textContent.trim()}`);
-      element.click();
+      // 检查目标节点是否已经加载内容
+      if (targetNode && targetNode.children.length > 0) {
+        console.log(`目标节点 ${nextId} 已有内容，强制重新选择`);
+        element.click(); // 强制点击以触发重新加载
+        setTimeout(() => resolve(), 15000); // 模拟等待行为
+        return;
+      }
   
-      const observer = new MutationObserver((mutations, obs) => {
-
+      // 动态观察逻辑（适用于内容未加载时）
+      const observer = new MutationObserver((mutations, observer) => {
         if (stopTask) {
-            observer.disconnect();
-            resolve(); // 停止观察并返回
-            return;
-          }
-
+          observer.disconnect();
+          resolve(); // 停止观察并返回
+          return;
+        }
         for (let mutation of mutations) {
-          if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
-            console.log(`目标列表 ${nextId} 加载完成`);
-            obs.disconnect();
-            setTimeout(resolve, 15000); // 等待列表加载稳定
+          if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+            observer.disconnect();
+            console.log(`Page loaded for ${element.textContent.trim()}. Waiting for 15 seconds...`);
+            setTimeout(resolve, 15000);
             return;
           }
         }
       });
   
-      // 观察目标节点
       if (targetNode) {
         observer.observe(targetNode, { childList: true });
       }
   
-      // 强制点击并设置超时保护
+      element.click(); // 模拟点击以触发加载
       setTimeout(() => {
-        console.warn(`目标列表 ${nextId} 加载超时，强制继续`);
         observer.disconnect();
         resolve();
-      }, 22000); // 等待最多 11 秒
+      }, 22000); // 超时保护
     });
   };
-
-
-
-
-
-//jiabin
-  const jiabinCatchData = async () => {
-    const yearInput = document.getElementById('combo-1060-inputEl')
-    const years = document.getElementById('combo-1060-picker-listEl').children
-    const yearsArray = Array.from(years)
-    if (yearInput) {
-      const yearIndex = yearsArray.findIndex(
-        year => year.textContent.trim() === yearInput.value.trim()
-      )
-      if (yearIndex !== -1) {
-        yearsArray.splice(0, yearIndex)
-      }
-    }
-    for (let year of yearsArray) {
-
-        if (stopTask) {
-            console.log("Task stopped due to global timeout.");
-            return; // 提前退出循环
-          }
-
-          
-      await jiabinWaitForNextList(year, 'combo-1061-picker-listEl')
-      await getMakes()
-    }
-  }
-  const jiabinWaitForNextList = (element, nextId) => {
-
-    if (stopTask) return Promise.resolve(); // 如果任务停止，提前返回
-
-
-    const targetNode = document.getElementById(nextId)
-    return new Promise((resolve, reject) => {
-      const observer = new MutationObserver((mutations, observer) => {
-
-        if (stopTask) {
-            observer.disconnect();
-            resolve(); // 停止观察并返回
-            return;
-          }
-
-        for (let mutation of mutations) {
-          if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-            observer.disconnect()
-            setTimeout(resolve, 15000)
-            return
-          }
-        }
-      })
-      if (targetNode) {
-        observer.observe(targetNode, { childList: true })
-      }
-      element.click()
-      setTimeout(() => {
-        observer.disconnect()
-        resolve()
-      }, 22000)
-    })
-  }
-
-
-
   const fetchAndLocate = async () => {
     try {
-    fetchAndLocateCounter++; // 增加计数器
-    console.log(`Fetching and locating: Call #${fetchAndLocateCounter}`); // 打印调用次数
-
       const startTime = Date.now();
-      console.log("Task started. Will run for 10 minutes...");
+      console.log("Task started. Will run for 4 hours...");
   
       while (Date.now() - startTime < runtimeLimit) {
         if (stopTask) {
-          console.log("Taking a 1-minute break...");
+          console.log("Taking a 5-minute break...");
           stopTask = false; // 重置停止标志
           await delay(shortRestTime); // 短休息 5 分钟
           continue; // 返回循环继续任务
@@ -612,6 +524,7 @@ const waitForNextList = async (element, nextId) => {
         // 每次开始任务前调用 locateLastPosition 重新定位
         // const response = await fetch('http://47.92.144.20:8080/api/parts/latest');
         const response = await fetch('http://localhost:8081/api/parts/latest');
+
         if (response.ok) {
           const data = await response.json();
           const lastData = data.latestParts?.[0];
@@ -626,7 +539,7 @@ const waitForNextList = async (element, nextId) => {
             }
           } else {
             console.log("No previous data found. Starting fresh.");
-            await jiabinCatchData();
+            await catchData();
           }
         } else {
           console.error("Failed to fetch latest data. Skipping this session.");
