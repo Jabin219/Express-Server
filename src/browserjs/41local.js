@@ -6,7 +6,10 @@ const runtimeLimit = 4 * 60 * 60 * 1000; // 每天运行 4 小时
 const restTime = 12 * 60 * 60 * 1000; // 每天休息 12 小时
 const sessionLimit = 3 * 60 * 1000; // 每 30 分钟短任务
 const shortRestTime = 1 * 60 * 1000; // 每 30 分钟后的短休息 5 分钟
+
 let taskRunCount = 0; // 用于跟踪完成的 4 小时任务次数
+let postSuccessCount = 0; // 记录成功的 POST 请求次数
+let postFailCount = 0; // 记录失败的 POST 请求次数
 
 // 设置全局停止标志的函数
 const setGlobalStopTimeout = (timeoutLimit = sessionLimit) => {
@@ -166,14 +169,14 @@ const makeFetchRequest = async (resultJson, year, make, model, type, engine) => 
   const delayTime = 1000; // 每次 POST 请求之间延迟 1 秒
   const timeoutLimit = 60000; // 超时时间 60 秒
 
-  console.log(`Preparing to send POST request with data:`, {
-    year,
-    make,
-    model,
-    type,
-    engine,
-    parts: resultJson.partsdata,
-  });
+//   console.log(`Preparing to send POST request with data:`, {
+//     year,
+//     make,
+//     model,
+//     type,
+//     engine,
+//     parts: resultJson.partsdata,
+//   });
 
   // 使用 AbortController 来设置超时
   const controller = new AbortController();
@@ -213,7 +216,9 @@ const makeFetchRequest = async (resultJson, year, make, model, type, engine) => 
     }
 
     const data = await response.json();
-    console.log(`POST request succeeded:`, data);
+    postSuccessCount++;
+    console.log(`第 ${postSuccessCount} 次成功的 POST 请求:`, data);
+
 
     // 延迟后
     console.log(`Waiting ${delayTime / 1000} seconds before next action...`);
