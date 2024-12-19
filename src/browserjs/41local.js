@@ -4,15 +4,15 @@ let stopTask = false; // 全局停止标志
 let stopTimeoutId = null; // 全局超时定时器 ID
 const runtimeLimit = 4 * 60 * 60 * 1000; // 每天运行 4 小时
 const restTime = 12 * 60 * 60 * 1000; // 每天休息 12 小时
-const sessionLimit = 30 * 60 * 1000; // 每 30 分钟短任务
-const shortRestTime = 5 * 60 * 1000; // 每 30 分钟后的短休息 5 分钟
+const sessionLimit = 3 * 60 * 1000; // 每 30 分钟短任务
+const shortRestTime = 1 * 60 * 1000; // 每 30 分钟后的短休息 5 分钟
+let taskRunCount = 0; // 用于跟踪完成的 4 小时任务次数
 
 // 设置全局停止标志的函数
 const setGlobalStopTimeout = (timeoutLimit = sessionLimit) => {
   stopTimeoutId = setTimeout(() => {
     stopTask = true; // 设置停止标志
-    console.log("30 minutes elapsed. Pausing for 5 minutes...");
-  }, timeoutLimit);
+console.log(`${sessionLimit / (60 * 1000)} 分钟完成，休息 ${shortRestTime / (60 * 1000)} 分钟...`);  }, timeoutLimit);
 };
 
 // 清理全局定时器
@@ -508,17 +508,21 @@ const waitForNextList = (element, nextId) => {
   const fetchAndLocate = async () => {
     try {
       const startTime = Date.now();
-      console.log("Task started. Will run for 4 hours...");
-  
+      taskRunCount++; // 增加任务计数
+      console.log(`开始第 ${taskRunCount} 次 ${runtimeLimit / (60 * 60 * 1000)} 小时任务...`);
+      
+      
       while (Date.now() - startTime < runtimeLimit) {
         if (stopTask) {
+        console.log(`休息 ${shortRestTime / (60 * 1000)} 分钟...`);
+
           console.log("Taking a 5-minute break...");
           stopTask = false; // 重置停止标志
           await delay(shortRestTime); // 短休息 5 分钟
           continue; // 返回循环继续任务
         }
   
-        console.log("Starting a new 30-minute session...");
+        console.log(`开始一个新的 ${sessionLimit / (60 * 1000)} 分钟task`);
         setGlobalStopTimeout(); // 设置 30 分钟计时器
   
         // 每次开始任务前调用 locateLastPosition 重新定位
@@ -548,7 +552,7 @@ const waitForNextList = (element, nextId) => {
         clearGlobalStopTimeout(); // 清理计时器
       }
   
-      console.log("4 hours completed. Resting for 12 hours...");
+      console.log(`第 ${taskRunCount} 次 ${runtimeLimit / (60 * 60 * 1000)} 小时任务完成。将开始 ${restTime / (60 * 60 * 1000)} 小时休息...`);
       await delay(restTime); // 长休息 12 小时
       fetchAndLocate(); // 重新启动任务
     } catch (error) {
