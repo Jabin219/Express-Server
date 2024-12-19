@@ -4,14 +4,14 @@ let stopTask = false; // 全局停止标志
 let stopTimeoutId = null; // 全局超时定时器 ID
 const runtimeLimit = 4 * 60 * 60 * 1000; // 每天运行 4 小时
 const restTime = 12 * 60 * 60 * 1000; // 每天休息 12 小时
-const sessionLimit = 30 * 60 * 1000; // 每 30 分钟短任务
-const shortRestTime = 5 * 60 * 1000; // 每 30 分钟后的短休息 5 分钟
+const sessionLimit = 3 * 60 * 1000; // 每 30 分钟短任务
+const shortRestTime = 1 * 60 * 1000; // 每 30 分钟后的短休息 5 分钟
 
 // 设置全局停止标志的函数
 const setGlobalStopTimeout = (timeoutLimit = sessionLimit) => {
   stopTimeoutId = setTimeout(() => {
     stopTask = true; // 设置停止标志
-    console.log("30 minutes elapsed. Pausing for 5 minutes...");
+    console.log("3 minutes elapsed. Pausing for 5 minutes...");
   }, timeoutLimit);
 };
 
@@ -242,6 +242,13 @@ const makeFetchRequest = async (resultJson, year, make, model, type, engine) => 
 // 根据上次数据定位的函数
 // 根据上次数据定位的函数
 const locateLastPosition = async (lastData) => {
+
+    if (stopTask) {
+        console.log("任务被手动终止，停止定位！");
+        return { success: false };
+      }
+
+      
     console.log('获得上次抓取的位置:', {
       year: lastData.year,
       make: lastData.make,
@@ -252,29 +259,34 @@ const locateLastPosition = async (lastData) => {
   
     // Helper function to retry locating an element
     const retryFindAndClick = async (selector, value, retries = 3) => {
-      for (let attempt = 1; attempt <= retries; attempt++) {
-        const elements = Array.from(document.querySelectorAll(selector));
-        const index = elements.findIndex((el) => el.textContent.trim() === value);
-  
-        if (index !== -1) {
-          elements[index].click();
-          console.log(`定位到: ${value}`);
-          return elements[index];
+        for (let attempt = 1; attempt <= retries; attempt++) {
+          const elements = Array.from(document.querySelectorAll(selector));
+          const index = elements.findIndex((el) => el.textContent.trim() === value);
+      
+          // 如果找到目标元素，点击它并返回
+          if (index !== -1) {
+            elements[index].click();
+            console.log(`成功定位到目标元素: ${value}`);
+            return elements[index];
+          }
+      
+          // 检查输入框是否已经填充了目标值（适用于自动选择的情况）
+          const inputSelector = selector.replace("-picker-listEl > *", "-inputEl");
+          const inputElement = document.querySelector(inputSelector);
+          if (inputElement && inputElement.value.trim() === value) {
+            console.log(`目标元素 ${value} 已经被自动选择`);
+            return inputElement; // 返回输入框表示成功
+          }
+      
+          console.warn(`未找到目标元素: ${value}，重新尝试打开下拉菜单...`);
+          const triggerSelector = selector.replace("-picker-listEl > *", "-trigger-picker");
+          document.querySelector(triggerSelector)?.click(); // 强制重新打开下拉菜单
+          await delay(1500); // 等待菜单加载
         }
-  
-        console.error(`未能找到: ${value}，等待 15 秒后重试 (${attempt}/${retries})...`);
-        await delay(15000); // 等待 15 秒
-  
-        // 重新打开下拉菜单（模拟重新加载列表）
-        const triggerSelector = selector.replace('-picker-listEl', '-trigger-picker');
-        document.querySelector(triggerSelector)?.click();
-        await delay(1500); // 确保下拉列表完全加载
-      }
-  
-      console.error(`多次尝试后仍未找到: ${value}`);
-      return null;
-    };
-  
+      
+        console.error(`多次尝试后仍未找到目标元素: ${value}`);
+        return null;
+      };
     // 定位年份
     const yearElement = await retryFindAndClick('#combo-1060-picker-listEl > *', lastData.year);
     if (!yearElement) return { success: false };
@@ -295,20 +307,15 @@ const locateLastPosition = async (lastData) => {
     if (!typeElement) return { success: false };
     await waitForNextList(typeElement, 'combo-1064-picker-listEl');
   
-    // 定位发动机
-    if (lastData.engine === 'All') {
-      console.log('发动机类型为 "All"，已由网页自动选择。');
-      return { success: true };
-    }
-  
     const engineElement = await retryFindAndClick('#combo-1064-picker-listEl > *', lastData.engine);
     if (!engineElement) {
       console.error(`(页面)未能找到发动机: ${lastData.engine}`);
-      return { success: true };
+      return { success: false };
     }
-  
-    console.log(`定位到发动机: ${lastData.engine}`);
-    return { success: true };
+
+    console.log("定位成功！");
+    return { success: true }; // 定位成功后返回 success: true
+
   };
 
 const getEngines = async () => {
@@ -458,45 +465,36 @@ const catchData = async () => {
 };
 
 // 修改 waitForNextList 方法以支持全局停止标志
-const waitForNextList = (element, nextId) => {
-    if (stopTask) return Promise.resolve(); // 如果任务停止，提前返回
-  
+const waitForNextList = async (element, nextId) => {
     const targetNode = document.getElementById(nextId);
-    return new Promise((resolve) => {
-      // 检查目标节点是否已经加载内容
-      if (targetNode && targetNode.children.length > 0) {
-        console.log(`目标节点 ${nextId} 已有内容，强制重新选择`);
-        element.click(); // 强制点击以触发重新加载
-        setTimeout(() => resolve(), 15000); // 模拟等待行为
-        return;
-      }
   
-      // 动态观察逻辑（适用于内容未加载时）
-      const observer = new MutationObserver((mutations, observer) => {
-        if (stopTask) {
-          observer.disconnect();
-          resolve(); // 停止观察并返回
-          return;
-        }
+    return new Promise((resolve) => {
+      // 强制点击当前元素，确保列表重新加载
+      console.log(`点击父元素重新加载: ${element.textContent.trim()}`);
+      element.click();
+  
+      const observer = new MutationObserver((mutations, obs) => {
         for (let mutation of mutations) {
-          if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-            observer.disconnect();
-            console.log(`Page loaded for ${element.textContent.trim()}. Waiting for 15 seconds...`);
-            setTimeout(resolve, 15000);
+          if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
+            console.log(`目标列表 ${nextId} 加载完成`);
+            obs.disconnect();
+            setTimeout(resolve, 1500); // 等待列表加载稳定
             return;
           }
         }
       });
   
+      // 观察目标节点
       if (targetNode) {
         observer.observe(targetNode, { childList: true });
       }
   
-      element.click(); // 模拟点击以触发加载
+      // 强制点击并设置超时保护
       setTimeout(() => {
+        console.warn(`目标列表 ${nextId} 加载超时，强制继续`);
         observer.disconnect();
         resolve();
-      }, 22000); // 超时保护
+      }, 11000); // 等待最多 11 秒
     });
   };
   const fetchAndLocate = async () => {
@@ -506,7 +504,7 @@ const waitForNextList = (element, nextId) => {
   
       while (Date.now() - startTime < runtimeLimit) {
         if (stopTask) {
-          console.log("Taking a 5-minute break...");
+          console.log("Taking a 1-minute break...");
           stopTask = false; // 重置停止标志
           await delay(shortRestTime); // 短休息 5 分钟
           continue; // 返回循环继续任务
