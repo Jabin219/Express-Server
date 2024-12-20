@@ -215,6 +215,11 @@ const makeFetchRequest = async (resultJson, year, make, model, type, engine) => 
       return null; // 返回空结果以跳过后续处理
     }
 
+      // 清空控制台 5的倍数
+      if (postSuccessCount % 5 === 0) {
+        console.clear();
+      }
+
     const data = await response.json();
     postSuccessCount++;
     console.log(`第 ${postSuccessCount} 次成功的 POST 请求:`, data);
