@@ -4,7 +4,7 @@ let stopTask = false; // 全局停止标志
 let stopTimeoutId = null; // 全局超时定时器 ID
 const runtimeLimit = 4 * 60 * 60 * 1000; // 每天运行 4 小时
 const restTime = 12 * 60 * 60 * 1000; // 每天休息 12 小时
-const sessionLimit = 3 * 60 * 1000; // 每 30 分钟短任务
+const sessionLimit = 5 * 60 * 1000; // 每 30 分钟短任务
 const shortRestTime = 1 * 60 * 1000; // 每 30 分钟后的短休息 5 分钟
 
 let taskRunCount = 0; // 用于跟踪完成的 4 小时任务次数
@@ -215,8 +215,8 @@ const makeFetchRequest = async (resultJson, year, make, model, type, engine) => 
       return null; // 返回空结果以跳过后续处理
     }
 
-      // 清空控制台 5的倍数
-      if (postSuccessCount % 5 === 0) {
+      // 清空控制台 100的倍数
+      if (postSuccessCount % 100 === 0) {
         console.clear();
       }
 
