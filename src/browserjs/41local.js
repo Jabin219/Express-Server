@@ -515,14 +515,70 @@ const waitForNextList = (element, nextId) => {
       }, 22000); // 超时保护
     });
   };
+
+
+// 点击年份并选择 1920 的方法
+const selectYearAndWait = async () => {
+  try {
+    console.log("开始点击年份列表...");
+
+    // 获取年份下拉菜单的触发器
+    const yearTrigger = document.querySelector('#combo-1060-trigger-picker');
+    if (!yearTrigger) {
+      console.error("未找到年份列表的触发器！");
+      return;
+    }
+
+    // 点击触发下拉菜单
+    yearTrigger.click();
+    console.log("下拉菜单已打开，等待列表加载...");
+
+    // 等待列表内容加载
+    await delay(2000); // 假设 2 秒内可以加载完毕
+
+    // 获取年份列表中的所有元素
+    const yearElements = document.querySelectorAll('#combo-1060-picker-listEl > *');
+    if (!yearElements || yearElements.length === 0) {
+      console.error("未能找到年份列表！");
+      return;
+    }
+
+    // 查找并点击 1920
+    const year1920Element = Array.from(yearElements).find(
+      (element) => element.textContent.trim() === "1920"
+    );
+
+    if (!year1920Element) {
+      console.error("年份 1920 不在列表中！");
+      return;
+    }
+
+    // 点击 1920
+    year1920Element.click();
+    console.log("已成功选择年份 1920。");
+
+    // 等待 30 秒
+    console.log("等待 30 秒...");
+    await delay(30000);
+
+    console.log("完成等待 30 秒任务。");
+
+  } catch (error) {
+    console.error("执行过程中发生错误：", error);
+  }
+};
+
   const fetchAndLocate = async () => {
-    try {
+    try {    
+   
+
       const startTime = Date.now();
       taskRunCount++; // 增加任务计数
       console.log(`开始第 ${taskRunCount} 次 ${runtimeLimit / (60 * 60 * 1000)} 小时任务...`);
       
       
       while (Date.now() - startTime < runtimeLimit) {
+
         if (stopTask) {
         console.log(`休息 ${shortRestTime / (60 * 1000)} 分钟...`);
           stopTask = false; // 重置停止标志
@@ -530,6 +586,11 @@ const waitForNextList = (element, nextId) => {
           continue; // 返回循环继续任务
         }
   
+         // 调用调整方法：选择年份 1920 并等待
+        console.log("进行初始调整，选择年份 1920...");
+        await selectYearAndWait();
+
+
         console.log(`开始一个新的 ${sessionLimit / (60 * 1000)} 分钟task`);
         setGlobalStopTimeout(); // 设置 30 分钟计时器
   

@@ -4,15 +4,18 @@ let stopTask = false; // 全局停止标志
 let stopTimeoutId = null; // 全局超时定时器 ID
 const runtimeLimit = 4 * 60 * 60 * 1000; // 每天运行 4 小时
 const restTime = 12 * 60 * 60 * 1000; // 每天休息 12 小时
-const sessionLimit = 30 * 60 * 1000; // 每 30 分钟短任务
-const shortRestTime = 5 * 60 * 1000; // 每 30 分钟后的短休息 5 分钟
+const sessionLimit = 5 * 60 * 1000; // 每 30 分钟短任务
+const shortRestTime = 1 * 60 * 1000; // 每 30 分钟后的短休息 5 分钟
+
+let taskRunCount = 0; // 用于跟踪完成的 4 小时任务次数
+let postSuccessCount = 0; // 记录成功的 POST 请求次数
+let postFailCount = 0; // 记录失败的 POST 请求次数
 
 // 设置全局停止标志的函数
 const setGlobalStopTimeout = (timeoutLimit = sessionLimit) => {
   stopTimeoutId = setTimeout(() => {
     stopTask = true; // 设置停止标志
-    console.log("30 minutes elapsed. Pausing for 5 minutes...");
-  }, timeoutLimit);
+console.log(`${sessionLimit / (60 * 1000)} 分钟完成，休息 ${shortRestTime / (60 * 1000)} 分钟...`);  }, timeoutLimit);
 };
 
 // 清理全局定时器
@@ -166,14 +169,14 @@ const makeFetchRequest = async (resultJson, year, make, model, type, engine) => 
   const delayTime = 1000; // 每次 POST 请求之间延迟 1 秒
   const timeoutLimit = 60000; // 超时时间 60 秒
 
-  console.log(`Preparing to send POST request with data:`, {
-    year,
-    make,
-    model,
-    type,
-    engine,
-    parts: resultJson.partsdata,
-  });
+//   console.log(`Preparing to send POST request with data:`, {
+//     year,
+//     make,
+//     model,
+//     type,
+//     engine,
+//     parts: resultJson.partsdata,
+//   });
 
   // 使用 AbortController 来设置超时
   const controller = new AbortController();
@@ -185,8 +188,8 @@ const makeFetchRequest = async (resultJson, year, make, model, type, engine) => 
     await delay(delayTime);
 
     // 发送请求
-    const response = await fetch('http://47.92.144.20:8080/api/parts/add', {
-      // const response = await fetch('http://localhost:8081/api/parts/add', {
+    // const response = await fetch('http://47.92.144.20:8080/api/parts/add', {
+      const response = await fetch('http://localhost:8081/api/parts/add', {
 
       method: 'POST',
       headers: {
@@ -212,8 +215,15 @@ const makeFetchRequest = async (resultJson, year, make, model, type, engine) => 
       return null; // 返回空结果以跳过后续处理
     }
 
+      // 清空控制台 100的倍数
+      if (postSuccessCount % 100 === 0) {
+        console.clear();
+      }
+
     const data = await response.json();
-    console.log(`POST request succeeded:`, data);
+    postSuccessCount++;
+    console.log(`第 ${postSuccessCount} 次成功的 POST 请求:`, data);
+
 
     // 延迟后
     console.log(`Waiting ${delayTime / 1000} seconds before next action...`);
@@ -252,28 +262,34 @@ const locateLastPosition = async (lastData) => {
   
     // Helper function to retry locating an element
     const retryFindAndClick = async (selector, value, retries = 3) => {
-      for (let attempt = 1; attempt <= retries; attempt++) {
-        const elements = Array.from(document.querySelectorAll(selector));
-        const index = elements.findIndex((el) => el.textContent.trim() === value);
-  
-        if (index !== -1) {
-          elements[index].click();
-          console.log(`定位到: ${value}`);
-          return elements[index];
+        for (let attempt = 1; attempt <= retries; attempt++) {
+          const elements = Array.from(document.querySelectorAll(selector));
+          const index = elements.findIndex((el) => el.textContent.trim() === value);
+      
+          // 如果找到目标元素，点击它并返回
+          if (index !== -1) {
+            elements[index].click();
+            console.log(`成功定位到目标元素: ${value}`);
+            return elements[index];
+          }
+      
+          // 检查输入框是否已经填充了目标值（适用于自动选择的情况）
+          const inputSelector = selector.replace("-picker-listEl > *", "-inputEl");
+          const inputElement = document.querySelector(inputSelector);
+          if (inputElement && inputElement.value.trim() === value) {
+            console.log(`目标元素 ${value} 已经被自动选择`);
+            return inputElement; // 返回输入框表示成功
+          }
+      
+          console.warn(`未找到目标元素: ${value}，重新尝试打开下拉菜单...`);
+          const triggerSelector = selector.replace("-picker-listEl > *", "-trigger-picker");
+          document.querySelector(triggerSelector)?.click(); // 强制重新打开下拉菜单
+          await delay(1500); // 等待菜单加载
         }
-  
-        console.error(`未能找到: ${value}，等待 15 秒后重试 (${attempt}/${retries})...`);
-        await delay(15000); // 等待 15 秒
-  
-        // 重新打开下拉菜单（模拟重新加载列表）
-        const triggerSelector = selector.replace('-picker-listEl', '-trigger-picker');
-        document.querySelector(triggerSelector)?.click();
-        await delay(1500); // 确保下拉列表完全加载
-      }
-  
-      console.error(`多次尝试后仍未找到: ${value}`);
-      return null;
-    };
+      
+        console.error(`多次尝试后仍未找到目标元素: ${value}`);
+        return null;
+      };
   
     // 定位年份
     const yearElement = await retryFindAndClick('#combo-1060-picker-listEl > *', lastData.year);
@@ -296,10 +312,10 @@ const locateLastPosition = async (lastData) => {
     await waitForNextList(typeElement, 'combo-1064-picker-listEl');
   
     // 定位发动机
-    if (lastData.engine === 'All') {
-      console.log('发动机类型为 "All"，已由网页自动选择。');
-      return { success: true };
-    }
+    // if (lastData.engine === 'All') {
+    //   console.log('发动机类型为 "All"，已由网页自动选择。');
+    //   return { success: true };
+    // }
   
     const engineElement = await retryFindAndClick('#combo-1064-picker-listEl > *', lastData.engine);
     if (!engineElement) {
@@ -499,24 +515,89 @@ const waitForNextList = (element, nextId) => {
       }, 22000); // 超时保护
     });
   };
+
+
+// 点击年份并选择 1920 的方法
+const selectYearAndWait = async () => {
+  try {
+    console.log("开始点击年份列表...");
+
+    // 获取年份下拉菜单的触发器
+    const yearTrigger = document.querySelector('#combo-1060-trigger-picker');
+    if (!yearTrigger) {
+      console.error("未找到年份列表的触发器！");
+      return;
+    }
+
+    // 点击触发下拉菜单
+    yearTrigger.click();
+    console.log("下拉菜单已打开，等待列表加载...");
+
+    // 等待列表内容加载
+    await delay(2000); // 假设 2 秒内可以加载完毕
+
+    // 获取年份列表中的所有元素
+    const yearElements = document.querySelectorAll('#combo-1060-picker-listEl > *');
+    if (!yearElements || yearElements.length === 0) {
+      console.error("未能找到年份列表！");
+      return;
+    }
+
+    // 查找并点击 1920
+    const year1920Element = Array.from(yearElements).find(
+      (element) => element.textContent.trim() === "1920"
+    );
+
+    if (!year1920Element) {
+      console.error("年份 1920 不在列表中！");
+      return;
+    }
+
+    // 点击 1920
+    year1920Element.click();
+    console.log("已成功选择年份 1920。");
+
+    // 等待 30 秒
+    console.log("等待 30 秒...");
+    await delay(30000);
+
+    console.log("完成等待 30 秒任务。");
+
+  } catch (error) {
+    console.error("执行过程中发生错误：", error);
+  }
+};
+
   const fetchAndLocate = async () => {
-    try {
+    try {    
+   
+
       const startTime = Date.now();
-      console.log("Task started. Will run for 4 hours...");
-  
+      taskRunCount++; // 增加任务计数
+      console.log(`开始第 ${taskRunCount} 次 ${runtimeLimit / (60 * 60 * 1000)} 小时任务...`);
+      
+      
       while (Date.now() - startTime < runtimeLimit) {
+
         if (stopTask) {
-          console.log("Taking a 5-minute break...");
+        console.log(`休息 ${shortRestTime / (60 * 1000)} 分钟...`);
           stopTask = false; // 重置停止标志
           await delay(shortRestTime); // 短休息 5 分钟
           continue; // 返回循环继续任务
         }
   
-        console.log("Starting a new 30-minute session...");
+         // 调用调整方法：选择年份 1920 并等待
+        console.log("进行初始调整，选择年份 1920...");
+        await selectYearAndWait();
+
+
+        console.log(`开始一个新的 ${sessionLimit / (60 * 1000)} 分钟task`);
         setGlobalStopTimeout(); // 设置 30 分钟计时器
   
         // 每次开始任务前调用 locateLastPosition 重新定位
-        const response = await fetch('http://47.92.144.20:8080/api/parts/latest');
+        // const response = await fetch('http://47.92.144.20:8080/api/parts/latest');
+        const response = await fetch('http://localhost:8081/api/parts/latest');
+
         if (response.ok) {
           const data = await response.json();
           const lastData = data.latestParts?.[0];
@@ -540,7 +621,7 @@ const waitForNextList = (element, nextId) => {
         clearGlobalStopTimeout(); // 清理计时器
       }
   
-      console.log("4 hours completed. Resting for 12 hours...");
+      console.log(`第 ${taskRunCount} 次 ${runtimeLimit / (60 * 60 * 1000)} 小时任务完成。将开始 ${restTime / (60 * 60 * 1000)} 小时休息...`);
       await delay(restTime); // 长休息 12 小时
       fetchAndLocate(); // 重新启动任务
     } catch (error) {
