@@ -4,12 +4,22 @@ let stopTask = false; // 全局停止标志
 let stopTimeoutId = null; // 全局超时定时器 ID
 const runtimeLimit = 4 * 60 * 60 * 1000; // 每天运行 4 小时
 const restTime = 12 * 60 * 60 * 1000; // 每天休息 12 小时
-const sessionLimit = 5 * 60 * 1000; // 每 30 分钟短任务
-const shortRestTime = 1 * 60 * 1000; // 每 30 分钟后的短休息 5 分钟
+const sessionLimit = 30 * 60 * 1000; // 每 30 分钟短任务
+const shortRestTime = 5 * 60 * 1000; // 每 30 分钟后的短休息 5 分钟
 
 let taskRunCount = 0; // 用于跟踪完成的 4 小时任务次数
 let postSuccessCount = 0; // 记录成功的 POST 请求次数
 let postFailCount = 0; // 记录失败的 POST 请求次数
+
+
+// 计算丢包率的方法
+const calculateDropRate = () => {
+    const totalAttempts = postSuccessCount + postFailCount; // 总尝试次数
+    if (totalAttempts === 0) return 0; // 避免除以 0
+    const dropRate = (postFailCount / totalAttempts) * 100;
+    console.log(`当前丢包率: ${dropRate.toFixed(2)}%`);
+    return dropRate;
+  };
 
 // 设置全局停止标志的函数
 const setGlobalStopTimeout = (timeoutLimit = sessionLimit) => {
@@ -159,95 +169,85 @@ const xmlToJson = xml => {
 // 修改 makeFetchRequest 函数，在每次请求前后设置延迟
 // 修改 makeFetchRequest 函数
 const makeFetchRequest = async (resultJson, year, make, model, type, engine) => {
-  // 如果 type 是 unknown，直接跳过 POST 请求
-  if (type === 'unknown') {
-    console.log('Skipping POST request because type is "unknown".');
-    return null; // 返回 null 表示跳过了
-  }
-
-  // 延迟时间设置（以毫秒为单位）
-  const delayTime = 1000; // 每次 POST 请求之间延迟 1 秒
-  const timeoutLimit = 60000; // 超时时间 60 秒
-
-//   console.log(`Preparing to send POST request with data:`, {
-//     year,
-//     make,
-//     model,
-//     type,
-//     engine,
-//     parts: resultJson.partsdata,
-//   });
-
-  // 使用 AbortController 来设置超时
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutLimit); // 设置超时触发
-
-  try {
-    // 延迟发送请求
-    console.log(`Waiting ${delayTime / 1000} seconds before sending the request...`);
-    await delay(delayTime);
-
-    // 发送请求
-    // const response = await fetch('http://47.92.144.20:8080/api/parts/add', {
-      const response = await fetch('http://localhost:8081/api/parts/add', {
-
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        resultJson,
-        year,
-        make,
-        model,
-        type,
-        engine,
-      }),
-      signal: controller.signal, // 绑定超时信号
-    });
-
-    // 清除超时定时器
-    clearTimeout(timeout);
-
-    // 检查响应状态
-    if (!response.ok) {
-      console.error(`POST request failed with status: ${response.status}`);
-      return null; // 返回空结果以跳过后续处理
+    if (type === 'unknown') {
+      console.log('Skipping POST request because type is "unknown".');
+      return null;
     }
+  
+    const delayTime = 1000; // 每次请求前的延迟时间
+    const timeoutLimit = 20000; // 超时时间 20秒
+    const maxRetries = 5; // 最大重试次数
+    let retryCount = 0; // 当前重试次数
+  
+    while (retryCount <= maxRetries) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), timeoutLimit);
+  
+      try {
+        isPostInProgress = true; // 设置 POST 请求正在进行
+        console.log(`POST 第 ${retryCount + 1} 次尝试中...`);
+  
+        // 延迟发送请求
+        console.log(`等待 ${delayTime / 1000} 秒后发送请求...`);
+        await delay(delayTime);
+  
+        const response = await fetch('http://localhost:8081/api/parts/add', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            resultJson,
+            year,
+            make,
+            model,
+            type,
+            engine,
+          }),
+          signal: controller.signal,
+        });
+  
+        clearTimeout(timeout);
+  
+        if (!response.ok) {
+          throw new Error(`POST 请求失败，状态码: ${response.status}`);
+        }
 
-      // 清空控制台 100的倍数
+        // 清空控制台 100的倍数
       if (postSuccessCount % 100 === 0) {
         console.clear();
       }
 
-    const data = await response.json();
-    postSuccessCount++;
-    console.log(`第 ${postSuccessCount} 次成功的 POST 请求:`, data);
-
-
-    // 延迟后
-    console.log(`Waiting ${delayTime / 1000} seconds before next action...`);
-    await delay(delayTime);
-
-    return data;
-  } catch (error) {
-    clearTimeout(timeout); // 确保超时被清除
-    if (error.name === 'AbortError') {
-      console.error(`Request timeout (exceeded ${timeoutLimit / 1000} seconds).`);
-    } else {
-      console.error('Fetch error:', error);
+      calculateDropRate();
+  
+        // 请求成功，解析响应数据
+        const data = await response.json();
+        postSuccessCount++;
+        console.log(`第 ${postSuccessCount} 次成功的 POST 请求，在第 ${retryCount + 1} 次POST成功！响应数据:`, data);
+  
+        isPostInProgress = false; // 请求成功，解除阻塞
+        return data; // 返回成功数据
+      } catch (error) {
+        clearTimeout(timeout);
+        retryCount++;
+  
+        // 检查是否达到最大重试次数
+        if (retryCount >= maxRetries) {
+          console.error(`POST 请求在 ${maxRetries} 次尝试后仍失败。放弃请求。错误信息: ${error.message}`);
+          postFailCount++;
+          isPostInProgress = false; // 请求失败，解除阻塞
+          calculateDropRate();
+          return null; // 返回 null，表示放弃
+        } else {
+          // 打印重试信息
+          console.warn(
+            `POST 请求失败，错误信息: ${error.message}。正在重试第 ${retryCount + 1} 次 (最多 ${maxRetries} 次)...`
+          );
+        }
+      }
     }
-    console.log(`Error occurred with parameters:`, {
-      year,
-      make,
-      model,
-      type,
-      engine,
-      parts: resultJson.partsdata,
-    });
-    return null; // 返回空结果以跳过后续处理
-  }
-};
+  };
+
 
 // 根据上次数据定位的函数
 // 根据上次数据定位的函数
@@ -327,27 +327,38 @@ const locateLastPosition = async (lastData) => {
     return { success: true };
   };
 
-const getEngines = async () => {
-
+  const getEngines = async () => {
     if (stopTask) {
-        console.log("Task stopped before getting enginee.");
-        return; // 提前退出
-      }
-
-
-  const engines = document.getElementById('combo-1064-picker-listEl')?.children
-  if (engines) {
-    const enginesArray = Array.from(engines)
-    if (enginesArray.length > 1) {
-      for (let engine of enginesArray) {
-        engine.click()
-        await new Promise(resolve => setTimeout(resolve, 8000))
-      }
-    } else {
-      await new Promise(resolve => setTimeout(resolve, 8000))
+      console.log("Task stopped before getting engine.");
+      return;
     }
-  }
-}
+  
+    const engines = document.getElementById('combo-1064-picker-listEl')?.children;
+    if (engines) {
+      const enginesArray = Array.from(engines);
+      if (enginesArray.length > 1) {
+        for (let engine of enginesArray) {
+          engine.click();
+          console.log(`Selected engine: ${engine.textContent.trim()}`);
+          
+          // 等待 POST 请求完成
+          while (isPostInProgress) {
+            console.log('Waiting for POST request to complete...');
+            await delay(1000); // 每秒检查一次
+          }
+  
+          await new Promise((resolve) => setTimeout(resolve, 8000));
+        }
+      } else {
+        while (isPostInProgress) {
+          console.log('Waiting for POST request to complete...');
+          await delay(1000);
+        }
+        await new Promise((resolve) => setTimeout(resolve, 8000));
+      }
+    }
+  };
+
 const getTypes = async () => {
 
     if (stopTask) {
@@ -593,6 +604,7 @@ const selectYearAndWait = async () => {
 
         console.log(`开始一个新的 ${sessionLimit / (60 * 1000)} 分钟task`);
         setGlobalStopTimeout(); // 设置 30 分钟计时器
+        calculateDropRate();
   
         // 每次开始任务前调用 locateLastPosition 重新定位
         // const response = await fetch('http://47.92.144.20:8080/api/parts/latest');

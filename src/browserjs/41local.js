@@ -3,9 +3,9 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 let stopTask = false; // 全局停止标志
 let stopTimeoutId = null; // 全局超时定时器 ID
 const runtimeLimit = 4 * 60 * 60 * 1000; // 每天运行 4 小时
-const restTime = 12 * 60 * 60 * 1000; // 每天休息 12 小时
-const sessionLimit = 5 * 60 * 1000; // 每 30 分钟短任务
-const shortRestTime = 1 * 60 * 1000; // 每 30 分钟后的短休息 5 分钟
+const restTime = 6 * 60 * 60 * 1000; // 每天休息 12 小时
+const sessionLimit = 30 * 60 * 1000; // 每 30 分钟短任务
+const shortRestTime = 5 * 60 * 1000; // 每 30 分钟后的短休息 5 分钟
 
 let taskRunCount = 0; // 用于跟踪完成的 4 小时任务次数
 let postSuccessCount = 0; // 记录成功的 POST 请求次数
@@ -188,8 +188,8 @@ const makeFetchRequest = async (resultJson, year, make, model, type, engine) => 
     await delay(delayTime);
 
     // 发送请求
-    // const response = await fetch('http://47.92.144.20:8080/api/parts/add', {
-      const response = await fetch('http://localhost:8081/api/parts/add', {
+    const response = await fetch('http://47.92.144.20:8080/api/parts/add', {
+    //   const response = await fetch('http://localhost:8081/api/parts/add', {
 
       method: 'POST',
       headers: {
@@ -233,7 +233,7 @@ const makeFetchRequest = async (resultJson, year, make, model, type, engine) => 
   } catch (error) {
     clearTimeout(timeout); // 确保超时被清除
     if (error.name === 'AbortError') {
-      console.error(`Request timeout (exceeded ${timeoutLimit / 1000} seconds).`);
+      console.log(`Request timeout (exceeded ${timeoutLimit / 1000} seconds).`);
     } else {
       console.error('Fetch error:', error);
     }
@@ -595,8 +595,8 @@ const selectYearAndWait = async () => {
         setGlobalStopTimeout(); // 设置 30 分钟计时器
   
         // 每次开始任务前调用 locateLastPosition 重新定位
-        // const response = await fetch('http://47.92.144.20:8080/api/parts/latest');
-        const response = await fetch('http://localhost:8081/api/parts/latest');
+        const response = await fetch('http://47.92.144.20:8080/api/parts/latest');
+        // const response = await fetch('http://localhost:8081/api/parts/latest');
 
         if (response.ok) {
           const data = await response.json();
